@@ -260,9 +260,16 @@ SAM3CPP_TENSORRT=OFF` yields the pure-CPU golden-sample build. Include-guard idi
    the sam3-ui-server (~3.5 GB VRAM) first, or tactics get skipped for memory
    and the resulting engine is slower (a starved build produced a 494 MB
    encoder engine vs the normal 946 MB).
-5. **P4 — golden process + tests**: `make_goldens.sh`, `parity_test.sh`,
-   `mask_utils_test`. **Gate**: one command regenerates goldens on CPU; parity gates
-   green for CUDA + TRT.
+5. **P4 — golden process + tests** *(done)*: `scripts/make_goldens.sh` (one
+   command regenerates the CPU-reference goldens over the 3-case prompt table),
+   `tests/parity_test.sh` (CUDA always; TensorRT via `--trt-onnx-dir`/
+   `--trt-cache-dir`), `tests/data/cat.jpg`, committed `tests/goldens/`,
+   `docs/goldens.md`. `mask_utils_test` + `consume_test` landed in P1.
+   **Gate results (2026-07-17)**: goldens regenerated on CPU in one command;
+   parity green for CUDA and TensorRT on all 3 cases. Tolerances: count exact,
+   score/iou ±0.02, box ±8 px, mask_px ±5% (binary 0.5-threshold masks show
+   2–3% cross-backend boundary jitter on small masks while scores/boxes stay
+   well inside their gates — 2% was too tight in practice).
 6. **P5 — adopt in release/sam3** *(separate decision)*: server switches to
    sam3cpplib (submodule), upstream sam3.cpp submodule + 13-patch stack retired.
 

@@ -33,6 +33,10 @@ cmake --build build -j$(nproc)
 ./build/tests/sam3cpp_mask_utils_test
 ./tests/consume_test/run.sh             # standalone submodule-consumer build
 
+# backend parity vs the committed CPU goldens (see docs/goldens.md)
+tests/parity_test.sh --model resources/models/sam3-q8_0.ggml \
+    [--trt-onnx-dir resources/onnx --trt-cache-dir var/trt_cache]
+
 # end-to-end (needs a sam3 .ggml model, e.g. release/sam3's sam3-q8_0.ggml)
 ./build/examples/sam3cpp_segment_image --model sam3-q8_0.ggml --image cat.jpg --text cat
 ```
