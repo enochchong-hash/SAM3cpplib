@@ -61,6 +61,11 @@ sam3cpplib/
 │   ├── api.cpp                 # public entry points + backend dispatch
 │   │                           #   (encode_image / segment_pcs / segment_pvs / set_encoder_fp8
 │   │                           #    / pcs_compute_exemplar_embedding)
+│   ├── debug.cpp               # test/debug API (sam3_test_dump_* phase5/6, geom, fenc-only,
+│   │                           #   ViT stage runners, tensor dump/info) -- backs the golden
+│   │                           #   process; added during P1 (not in the original tree sketch)
+│   ├── image_io.cpp            # sam3_load_image/sam3_save_mask (stb) -- compiled only with
+│   │                           #   SAM3CPP_IMAGE_IO=ON (default); OFF gives the codec-free core
 │   │
 │   ├── ggml/                   # ggml backend (CUDA + CPU golden path)
 │   │   ├── backend.cpp         # backend init, GPU detection, graph-lowering support
@@ -83,6 +88,7 @@ sam3cpplib/
 ├── 3rdparty/
 │   ├── ggml/                   # submodule: https://github.com/PABannier/ggml.git
 │   │                           #   pinned at 331b9cb (the pin validated in production)
+│   ├── stb/                    # vendored stb_image/stb_image_write (image_io.cpp + examples)
 │   ├── tensorrt-include/       # gitignored; vendored by scripts/setup_tensorrt.sh
 │   └── tensorrt-libs/          # gitignored; from pip wheel tensorrt-cu12==10.13.3.9
 │
@@ -188,8 +194,9 @@ struct sam3_trt_config {
 |---|---|---|
 | `SAM3CPP_CUDA` | ON | ggml CUDA backend (`GGML_CUDA`) |
 | `SAM3CPP_TENSORRT` | OFF | compile `src/trt/`; needs `scripts/setup_tensorrt.sh` run once |
+| `SAM3CPP_IMAGE_IO` | ON | compile `src/image_io.cpp` (stb `sam3_load_image`/`sam3_save_mask`); OFF = codec-free core (raw RGB only) |
 | `SAM3CPP_BUILD_EXAMPLES` | ON if top-level | e2e_check, segment_image, quantize |
-| `SAM3CPP_BUILD_TESTS` | ON if top-level | mask_utils_test, consume_test hook |
+| `SAM3CPP_BUILD_TESTS` | ON if top-level | mask_utils_test; consume_test runs separately via `tests/consume_test/run.sh` |
 
 CPU-only build = both backends' options off is NOT a thing: ggml is always in (it is
 the CPU fallback and the weight container's dequant layer); `SAM3CPP_CUDA=OFF
@@ -199,11 +206,28 @@ SAM3CPP_TENSORRT=OFF` yields the pure-CPU golden-sample build. Include-guard idi
 
 ## Porting phases (each gated before the next)
 
-1. **P0 — scaffold** *(this commit)*: folders, PLAN.md, README, LICENSE, .gitignore.
-2. **P1 — ggml core**: ggml submodule pin, public header, `src/` minus `trt/`,
-   CMake, `examples/`. **Gate**: CPU + CUDA builds; `e2e_check` on cat.jpg matches
-   today's outputs exactly (same weights, same code → same numbers, tolerance 0 for
-   CPU, 0.02 score for CUDA); `consume_test` builds standalone.
+1. **P0 — scaffold** *(done, ad28571)*: folders, PLAN.md, README, LICENSE, .gitignore.
+2. **P1 — ggml core** *(done — see notes below)*: ggml submodule pin, public header,
+   `src/` minus `trt/`, CMake, `examples/`. **Gate**: CPU + CUDA builds; `e2e_check`
+   on cat.jpg matches today's outputs exactly (same weights, same code → same numbers,
+   tolerance 0 for CPU, 0.02 score for CUDA); `consume_test` builds standalone.
+
+   P1 execution notes (deltas vs the sketch above):
+   - The `src/trt/*` files were **extracted now** (they compile only under
+     `SAM3CPP_TENSORRT`); P2 validates them rather than porting from scratch.
+   - Two modules were added: `src/debug.cpp` (the sam3.h test/debug API — needed by
+     the golden process) and `src/image_io.cpp` (optional stb-backed
+     `sam3_load_image`/`sam3_save_mask`, kept because release/sam3's server + CLI
+     call them; `SAM3CPP_IMAGE_IO=OFF` restores the codec-free guarantee).
+   - `no_mem_embed` is registered/loaded despite being nominally a tracker tensor:
+     single-image PVS conditions image features with it. All other tracker weights
+     in the .ggml container are skipped by the loader (which now seeks past any
+     unregistered record instead of failing).
+   - Dropped as dead code: `sam3_state_set_orig_dims` (no callers anywhere).
+   - **Gate results (2026-07-16, RTX 5060, sam3-q8_0, cat.jpg)**: CUDA old-vs-new
+     bitwise IDENTICAL for PCS text (0.961892), PCS + exemplar box, PVS single point
+     (iou 0.985920), PVS multi+negative points, PVS box. CPU old-vs-new: identical
+     (see gate log in this commit's message). consume_test + mask_utils_test pass.
 3. **P2 — TensorRT**: `src/trt/`, `setup_tensorrt.sh`, config struct. **Gate**: the
    production goldens hold (PCS 0.963, PVS iou 0.9859, ±0.02) on FP16 and FP8; warm
    timings within noise of today (~120/35/7 ms encoder/PCS/PVS).

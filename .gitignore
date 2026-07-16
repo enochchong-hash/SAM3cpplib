@@ -1,6 +1,7 @@
 # Build trees
 build/
 build-*/
+tests/consume_test/build/
 
 # Runtime artifacts (TensorRT engine caches, logs, pids)
 var/
