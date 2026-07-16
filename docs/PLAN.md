@@ -242,9 +242,24 @@ SAM3CPP_TENSORRT=OFF` yields the pure-CPU golden-sample build. Include-guard idi
      bitwise IDENTICAL to the env-driven run; `skip_ggml_weights` honored.
    Not yet exercised: engine build from scratch (P3's gate regenerates ONNX and
    rebuilds engines end-to-end).
-4. **P3 — tooling**: `scripts/convert/`, `export_onnx.sh`, FP8 calib/inject.
-   **Gate**: regenerate all ONNX from the .ggml, rebuild engines from scratch,
-   goldens still hold.
+4. **P3 — tooling** *(done)*: `scripts/convert/` (7 Python files; SAM2/EdgeTAM
+   converters dropped), `scripts/export_onnx.sh` (dump tools → all 3 graphs in
+   one command, `--fp8-amax` for the FP8 variant), `examples/dump_*_weights.cpp`.
+   `fp8_inject_qdq.py` gained a memory fix: weight initializers are swapped for
+   zero-payload stubs around the opset 13→19 version conversion (the converter
+   copies the whole ModelProto several times; with weights embedded that
+   transiently needs >10 GB and gets OOM-killed).
+   **Gate results (2026-07-17)**: regenerated `sam3_encoder/pcs/pvs.onnx` are
+   **byte-identical** to production; regenerated FP8 ONNX is semantically
+   identical (same nodes/values; proto encoding differs). Engines rebuilt from
+   scratch in an empty cache: FP16 PCS 0.962746 / PVS iou 0.986000 (Δ≤0.0002
+   vs the production-engine outputs — fresh tactic selection, not bitwise);
+   FP8 PCS 0.963489 / PVS iou 0.985535. Warm timings 115/36/7 ms (the fresh
+   PCS engine actually hit the documented 35 ms optimum).
+   Operational note: TensorRT engine builds want the GPU largely free — stop
+   the sam3-ui-server (~3.5 GB VRAM) first, or tactics get skipped for memory
+   and the resulting engine is slower (a starved build produced a 494 MB
+   encoder engine vs the normal 946 MB).
 5. **P4 — golden process + tests**: `make_goldens.sh`, `parity_test.sh`,
    `mask_utils_test`. **Gate**: one command regenerates goldens on CPU; parity gates
    green for CUDA + TRT.

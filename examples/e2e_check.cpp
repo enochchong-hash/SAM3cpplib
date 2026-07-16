@@ -43,6 +43,7 @@ int main(int argc, char** argv) {
     // after the image loads); embedding files hold one raw 256-float row.
     std::vector<sam3_box> pos_ex_px, neg_ex_px;
     bool use_fp8 = false;
+    int n_runs = 3;  // cold + warm repeats; goldens use --runs 1
     std::string save_embedding_path, use_embedding_path;
 
     auto parse_boxes = [](const char* s) {
@@ -86,6 +87,7 @@ int main(int argc, char** argv) {
             params.trt.pvs_onnx = d + "/sam3_pvs.onnx";
         }
         else if (!strcmp(argv[i], "--trt-cache-dir") && i + 1 < argc) { params.trt.cache_dir = argv[++i]; }
+        else if (!strcmp(argv[i], "--runs") && i + 1 < argc)    { n_runs = atoi(argv[++i]); if (n_runs < 1) n_runs = 1; }
         else if (!strcmp(argv[i], "--threads") && i + 1 < argc) { params.n_threads = atoi(argv[++i]); }
         else { fprintf(stderr, "unknown arg %s\n", argv[i]); return 1; }
     }
@@ -104,7 +106,7 @@ int main(int argc, char** argv) {
     sam3_image image = sam3_load_image(image_path);
     if (!state || image.data.empty()) { fprintf(stderr, "state/image load failed\n"); return 1; }
 
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < n_runs; ++i) {
         auto t_enc0 = std::chrono::high_resolution_clock::now();
         if (!sam3_encode_image(*state, *model, image)) { fprintf(stderr, "encode failed\n"); return 1; }
         double enc_ms = std::chrono::duration<double, std::milli>(
@@ -154,7 +156,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "loaded concept embedding from %s\n", use_embedding_path.c_str());
     }
     sam3_result pcs_result;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < n_runs; ++i) {
         auto t_pcs0 = std::chrono::high_resolution_clock::now();
         pcs_result = sam3_segment_pcs(*state, *model, pcs);
         double pcs_ms = std::chrono::duration<double, std::milli>(
@@ -186,7 +188,7 @@ int main(int argc, char** argv) {
         pvs.pos_points.push_back({point_x, point_y});
     }
     sam3_result pvs_result;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < n_runs; ++i) {
         auto t_pvs0 = std::chrono::high_resolution_clock::now();
         pvs_result = sam3_segment_pvs(*state, *model, pvs);
         double pvs_ms = std::chrono::duration<double, std::milli>(

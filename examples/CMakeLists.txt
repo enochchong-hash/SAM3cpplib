@@ -13,3 +13,11 @@ endif()
 
 add_executable(sam3cpp_quantize quantize.cpp)
 target_link_libraries(sam3cpp_quantize PRIVATE ggml)
+
+# Offline weight-dump tools backing scripts/export_onnx.sh (raw .bin blobs +
+# manifest.json consumed by the ONNX-authoring scripts in scripts/convert/).
+add_executable(sam3cpp_dump_encoder_weights dump_encoder_weights.cpp)
+target_link_libraries(sam3cpp_dump_encoder_weights PRIVATE sam3cpp)
+
+add_executable(sam3cpp_dump_pcs_pvs_weights dump_pcs_pvs_weights.cpp)
+target_link_libraries(sam3cpp_dump_pcs_pvs_weights PRIVATE sam3cpp)
