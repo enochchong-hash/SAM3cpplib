@@ -883,9 +883,18 @@ std::shared_ptr<sam3_model> sam3_load_model(const sam3_params& params) {
     }
 
     // ── Register all tensor shapes ───────────────────────────────────────
-    if (getenv("SAM3_TRT_SKIP_GGML_WEIGHTS")) {
+    bool skip_ggml_weights = getenv("SAM3_TRT_SKIP_GGML_WEIGHTS") != nullptr;
+#ifdef SAM3_TRT_ENCODER
+    // Programmatic TRT config: captured here (before any engine lookup);
+    // env vars stay authoritative when params.trt.enabled is false.
+    sam3_trt_set_config(params.trt);
+    if (params.trt.enabled && params.trt.skip_ggml_weights) {
+        skip_ggml_weights = true;
+    }
+#endif
+    if (skip_ggml_weights) {
         model->trt_only_weights = true;
-        fprintf(stderr, "%s: SAM3_TRT_SKIP_GGML_WEIGHTS=1 -- loading only sam_pe.* weights; "
+        fprintf(stderr, "%s: skip-ggml-weights requested -- loading only sam_pe.* weights; "
                         "ggml inference for encode/PCS/PVS is DISABLED (TensorRT engines "
                         "required, no fallback)\n", __func__);
     }

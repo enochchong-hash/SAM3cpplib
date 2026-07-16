@@ -21,8 +21,7 @@
 bool sam3_try_trt_segment_pvs(sam3_state& state, const sam3_model& model,
                                      const sam3_pvs_params& params,
                                      sam3_result& out_result) {
-    static const bool enabled = getenv("SAM3_TRT_ENCODER") != nullptr;
-    if (!enabled) return false;
+    if (!sam3_trt_enabled()) return false;
 
     // state.neck_trk[i]->data is read directly as a CUDA device pointer
     // below (no ggml_backend_tensor_get round trip) -- only safe if the

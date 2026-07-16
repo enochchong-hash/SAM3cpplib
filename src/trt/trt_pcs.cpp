@@ -20,8 +20,7 @@ bool sam3_try_trt_segment_pcs(sam3_state& state, const sam3_model& model,
                                      const sam3_pcs_params& params,
                                      const std::vector<int32_t>& token_ids,
                                      sam3_result& out_result) {
-    static const bool enabled = getenv("SAM3_TRT_ENCODER") != nullptr;
-    if (!enabled) return false;
+    if (!sam3_trt_enabled()) return false;
 
     const int n_boxes = (int)(params.pos_exemplars.size() + params.neg_exemplars.size());
     const int n_geo = n_boxes + (int)params.exemplar_embeddings.size() + 1;
@@ -63,8 +62,9 @@ bool sam3_try_trt_segment_pcs(sam3_state& state, const sam3_model& model,
     // reformat boundaries), which is what this knob is for.
     bool pcs_allow_fp16 = false;
     std::vector<std::string> pcs_fp32_patterns;
-    if (const char* prec = getenv("SAM3_TRT_PCS_PRECISION")) {
-        const std::string p = prec;
+    const std::string pcs_prec = sam3_trt_cfg_value("SAM3_TRT_PCS_PRECISION");
+    if (!pcs_prec.empty()) {
+        const std::string& p = pcs_prec;
         if (p == "fp16") {
             pcs_allow_fp16 = true;
         } else if (p.rfind("mixed:", 0) == 0) {
@@ -78,7 +78,7 @@ bool sam3_try_trt_segment_pcs(sam3_state& state, const sam3_model& model,
                 pos = comma + 1;
             }
         } else if (p != "fp32") {
-            fprintf(stderr, "%s: unknown SAM3_TRT_PCS_PRECISION '%s', using fp32\n", __func__, prec);
+            fprintf(stderr, "%s: unknown SAM3_TRT_PCS_PRECISION '%s', using fp32\n", __func__, p.c_str());
         }
     }
     sam3_trt_engine* eng = sam3_get_trt_engine_cached("SAM3_TRT_PCS_ONNX_PATH", "SAM3_TRT_PCS_CACHE_DIR",

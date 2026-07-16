@@ -228,9 +228,20 @@ SAM3CPP_TENSORRT=OFF` yields the pure-CPU golden-sample build. Include-guard idi
      bitwise IDENTICAL for PCS text (0.961892), PCS + exemplar box, PVS single point
      (iou 0.985920), PVS multi+negative points, PVS box. CPU old-vs-new: identical
      (see gate log in this commit's message). consume_test + mask_utils_test pass.
-3. **P2 — TensorRT**: `src/trt/`, `setup_tensorrt.sh`, config struct. **Gate**: the
-   production goldens hold (PCS 0.963, PVS iou 0.9859, ±0.02) on FP16 and FP8; warm
-   timings within noise of today (~120/35/7 ms encoder/PCS/PVS).
+3. **P2 — TensorRT** *(done)*: `src/trt/`, `setup_tensorrt.sh` (with a
+   `--copy-from <dir>` fast path that hardlinks an already-vendored SDK),
+   `sam3_trt_config` wired: captured by `sam3_load_model` via `sam3_params::trt`,
+   consulted only when `.enabled` (env vars stay authoritative otherwise; the
+   single `cache_dir` root maps to `/encoder`, `/pcs`, `/pvs` subdirs).
+   **Gate results (2026-07-16, existing production ONNX + engine caches)**:
+   - FP16 env-driven: old-vs-new bitwise IDENTICAL (PCS 0.962549, PVS iou
+     0.985965); warm timings 124/49/8 ms encoder/PCS/PVS (parity with production).
+   - FP8 (`--fp8` → `sam3_set_encoder_fp8`): PCS 0.963656 (Δ0.0011), PVS iou
+     0.985543 (Δ0.0004), boxes identical — well inside ±0.02.
+   - Config-driven (zero SAM3_TRT_* env vars, `--trt-onnx-dir`/`--trt-cache-dir`):
+     bitwise IDENTICAL to the env-driven run; `skip_ggml_weights` honored.
+   Not yet exercised: engine build from scratch (P3's gate regenerates ONNX and
+   rebuilds engines end-to-end).
 4. **P3 — tooling**: `scripts/convert/`, `export_onnx.sh`, FP8 calib/inject.
    **Gate**: regenerate all ONNX from the .ggml, rebuild engines from scratch,
    goldens still hold.

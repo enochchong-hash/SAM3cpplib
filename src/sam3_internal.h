@@ -850,6 +850,11 @@ bool sam3_copy_tensor_to_f32(struct ggml_tensor * t, std::vector<float> & output
 // ── trt/ (compiled only with SAM3_TRT_ENCODER; see src/trt/) ──────────────
 #ifdef SAM3_TRT_ENCODER
 struct sam3_trt_engine;
+// Programmatic config (sam3_params::trt): captured at load time; fields are
+// consulted only when cfg.enabled, env vars remain the fallback.
+void sam3_trt_set_config(const sam3_trt_config& cfg);
+bool sam3_trt_enabled();
+std::string sam3_trt_cfg_value(const char* env_name);
 sam3_trt_engine* sam3_get_trt_engine_cached(const char* onnx_env_name,
                                             const char* cache_env_name,
                                             bool allow_fp16 = true,

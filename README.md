@@ -13,10 +13,12 @@ Designed to be embedded in a larger application as a git submodule.
 This library supersedes the `release/sam3` submodule-plus-patches arrangement; the code
 is owned here (originally derived from MIT-licensed `PABannier/sam3.cpp`, see LICENSE).
 
-**Status: P1 (ggml core) complete** — CPU + CUDA backends build and pass the
-parity gates (bitwise-identical outputs vs the production monolith on cat.jpg
-across text / exemplar / point / negative-point / box prompts). TensorRT
-backend sources are in the tree but unvalidated until P2. See
+**Status: P2 (TensorRT) complete** — all three backends build and pass their
+parity gates: ggml CPU/CUDA are bitwise-identical to the production monolith
+on cat.jpg (text / exemplar / point / negative-point / box prompts), and the
+TensorRT FP16 path is bitwise-identical too (FP8 within ±0.002) at production
+timings (~124/49/8 ms encoder/PCS/PVS warm). TensorRT can be configured
+programmatically via `sam3_params::trt` or the SAM3_TRT_* env vars. See
 [docs/PLAN.md](docs/PLAN.md) for the structure, port mapping, and phase gates.
 
 ## Build
@@ -35,5 +37,8 @@ cmake --build build -j$(nproc)
 ./build/examples/sam3cpp_segment_image --model sam3-q8_0.ggml --image cat.jpg --text cat
 ```
 
-Key CMake options: `SAM3CPP_CUDA` (ON), `SAM3CPP_TENSORRT` (OFF until P2),
+For TensorRT: `./scripts/setup_tensorrt.sh` once (or `--copy-from <dir>` to
+reuse an already-vendored SDK), then configure with `-DSAM3CPP_TENSORRT=ON`.
+
+Key CMake options: `SAM3CPP_CUDA` (ON), `SAM3CPP_TENSORRT` (OFF),
 `SAM3CPP_IMAGE_IO` (ON; OFF = codec-free core, raw RGB in / raw masks out).

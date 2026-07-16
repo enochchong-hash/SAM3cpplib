@@ -20,6 +20,41 @@ struct sam3_trt_stderr_logger : public nvinfer1::ILogger {
     }
 };
 
+// ── Programmatic configuration (sam3_params::trt) ──────────────────────────
+// Captured once at sam3_load_model time. Fields are consulted only when
+// cfg.enabled is set; otherwise (and for any empty field) the SAM3_TRT_* env
+// vars remain authoritative, so env-driven deployments (release/sam3's
+// trt_env.sh) behave exactly as before this struct existed.
+static sam3_trt_config g_trt_cfg;
+
+void sam3_trt_set_config(const sam3_trt_config& cfg) {
+    g_trt_cfg = cfg;
+}
+
+bool sam3_trt_enabled() {
+    return g_trt_cfg.enabled || getenv("SAM3_TRT_ENCODER") != nullptr;
+}
+
+// env-var name -> effective value ("" = unset). The single cfg.cache_dir
+// root maps onto the three per-engine cache env vars via subdirectories.
+std::string sam3_trt_cfg_value(const char* env_name) {
+    if (g_trt_cfg.enabled) {
+        const std::string n = env_name;
+        if (n == "SAM3_TRT_ONNX_PATH"     && !g_trt_cfg.encoder_onnx.empty())     return g_trt_cfg.encoder_onnx;
+        if (n == "SAM3_TRT_ONNX_PATH_FP8" && !g_trt_cfg.encoder_onnx_fp8.empty()) return g_trt_cfg.encoder_onnx_fp8;
+        if (n == "SAM3_TRT_PCS_ONNX_PATH" && !g_trt_cfg.pcs_onnx.empty())         return g_trt_cfg.pcs_onnx;
+        if (n == "SAM3_TRT_PVS_ONNX_PATH" && !g_trt_cfg.pvs_onnx.empty())         return g_trt_cfg.pvs_onnx;
+        if (!g_trt_cfg.cache_dir.empty()) {
+            if (n == "SAM3_TRT_CACHE_DIR")     return g_trt_cfg.cache_dir + "/encoder";
+            if (n == "SAM3_TRT_PCS_CACHE_DIR") return g_trt_cfg.cache_dir + "/pcs";
+            if (n == "SAM3_TRT_PVS_CACHE_DIR") return g_trt_cfg.cache_dir + "/pvs";
+        }
+        if (n == "SAM3_TRT_PCS_PRECISION" && !g_trt_cfg.pcs_precision.empty())    return g_trt_cfg.pcs_precision;
+    }
+    const char* v = getenv(env_name);
+    return v ? std::string(v) : std::string();
+}
+
 // Lazily built/cached once per process, per distinct ONNX-path env var (one
 // GPU model per process is already this codebase's own documented constraint
 // -- see g_gpu_backend above -- but the image encoder / PCS / PVS engines
@@ -32,12 +67,12 @@ sam3_trt_engine* sam3_get_trt_engine_cached(const char* onnx_env_name, const cha
     if (it != cache.end()) return it->second;
 
     sam3_trt_engine* result = nullptr;
-    const char* onnx_path = getenv(onnx_env_name);
-    if (!onnx_path) {
-        fprintf(stderr, "%s: %s is unset\n", __func__, onnx_env_name);
+    const std::string onnx_path = sam3_trt_cfg_value(onnx_env_name);
+    if (onnx_path.empty()) {
+        fprintf(stderr, "%s: %s is unset (env or sam3_trt_config)\n", __func__, onnx_env_name);
     } else {
-        const char* cache_dir_env = getenv(cache_env_name);
-        const std::string cache_dir = cache_dir_env ? cache_dir_env : (std::string(onnx_path) + ".cache");
+        const std::string cache_dir_cfg = sam3_trt_cfg_value(cache_env_name);
+        const std::string cache_dir = !cache_dir_cfg.empty() ? cache_dir_cfg : (onnx_path + ".cache");
         static sam3_trt_stderr_logger logger;
         std::vector<char> engine_blob;
         if (sam3_trt_build_or_load_engine(onnx_path, cache_dir, logger, engine_blob, allow_fp16,
@@ -57,8 +92,7 @@ sam3_trt_engine* sam3_get_trt_engine_cached(const char* onnx_env_name, const cha
 // caller falls through to the unchanged ggml path -- never a hard failure.
 bool sam3_try_trt_encode_image(sam3_state& state, const sam3_model& model,
                                       const float* chw_data, int img_size) {
-    static const bool enabled = getenv("SAM3_TRT_ENCODER") != nullptr;
-    if (!enabled) return false;
+    if (!sam3_trt_enabled()) return false;
 
     const auto& hp = model.hparams;
     if (img_size != hp.img_size) {
@@ -186,6 +220,4 @@ bool sam3_try_trt_encode_image(sam3_state& state, const sam3_model& model,
     state.backend = model.backend;
     return true;
 }
-#endif  // SAM3_TRT_ENCODER
-
 #endif  // SAM3_TRT_ENCODER

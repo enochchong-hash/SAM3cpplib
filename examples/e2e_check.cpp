@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
     // Exemplar boxes in PIXEL coords "x0,y0,x1,y1;..." (normalized to [0,1]
     // after the image loads); embedding files hold one raw 256-float row.
     std::vector<sam3_box> pos_ex_px, neg_ex_px;
+    bool use_fp8 = false;
     std::string save_embedding_path, use_embedding_path;
 
     auto parse_boxes = [](const char* s) {
@@ -73,6 +74,18 @@ int main(int argc, char** argv) {
         else if (!strcmp(argv[i], "--use-embedding") && i + 1 < argc)  { use_embedding_path = argv[++i]; }
         else if (!strcmp(argv[i], "--out") && i + 1 < argc)     { out_dir = argv[++i]; }
         else if (!strcmp(argv[i], "--no-gpu"))                  { params.use_gpu = false; }
+        else if (!strcmp(argv[i], "--fp8"))                     { use_fp8 = true; }
+        else if (!strcmp(argv[i], "--trt-onnx-dir") && i + 1 < argc) {
+            // Programmatic TRT config (no env vars): expects the standard
+            // export names sam3_encoder.onnx / sam3_pcs.onnx / sam3_pvs.onnx.
+            std::string d = argv[++i];
+            params.trt.enabled = true;
+            params.trt.encoder_onnx = d + "/sam3_encoder.onnx";
+            params.trt.encoder_onnx_fp8 = d + "/sam3_encoder_fp8.onnx";
+            params.trt.pcs_onnx = d + "/sam3_pcs.onnx";
+            params.trt.pvs_onnx = d + "/sam3_pvs.onnx";
+        }
+        else if (!strcmp(argv[i], "--trt-cache-dir") && i + 1 < argc) { params.trt.cache_dir = argv[++i]; }
         else if (!strcmp(argv[i], "--threads") && i + 1 < argc) { params.n_threads = atoi(argv[++i]); }
         else { fprintf(stderr, "unknown arg %s\n", argv[i]); return 1; }
     }
@@ -87,6 +100,7 @@ int main(int argc, char** argv) {
     if (!model) { fprintf(stderr, "model load failed\n"); return 1; }
 
     auto state = sam3_create_state(*model, params);
+    if (use_fp8) sam3_set_encoder_fp8(*state, true);
     sam3_image image = sam3_load_image(image_path);
     if (!state || image.data.empty()) { fprintf(stderr, "state/image load failed\n"); return 1; }
 
