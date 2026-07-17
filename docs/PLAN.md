@@ -89,13 +89,13 @@ sam3cpplib/
 │   ├── ggml/                   # submodule: https://github.com/PABannier/ggml.git
 │   │                           #   pinned at 331b9cb (the pin validated in production)
 │   ├── stb/                    # vendored stb_image/stb_image_write (image_io.cpp + examples)
-│   ├── tensorrt-include/       # gitignored; vendored by scripts/setup_tensorrt.sh
+│   ├── tensorrt-include/       # gitignored; vendored by scripts/setup/setup_tensorrt.sh
 │   └── tensorrt-libs/          # gitignored; from pip wheel tensorrt-cu12==10.13.3.9
 │
 ├── scripts/
-│   ├── setup_tensorrt.sh       # one-time dev setup: vendor TRT 10.13.3 headers + libs
-│   ├── export_onnx.sh          # .ggml → all three ONNX graphs (encoder/PCS/PVS) in one go
-│   ├── make_goldens.sh         # THE golden-sample process: run the CPU backend on
+│   ├── setup/setup_tensorrt.sh # one-time dev setup: vendor TRT 10.13.3 headers + libs
+│   ├── development/export_onnx.sh  # .ggml → all three ONNX graphs (encoder/PCS/PVS)
+│   ├── development/make_goldens.sh # THE golden-sample process: run the CPU backend on
 │   │                           #   tests/data images, write tests/goldens/
 │   └── convert/                # offline Python tooling (never used at runtime)
 │       ├── convert_sam3_to_ggml.py         # HF checkpoint → .ggml container
@@ -122,7 +122,7 @@ sam3cpplib/
 │
 ├── resources/
 │   ├── models/                 # .ggml weights (gitignored; README explains download)
-│   └── onnx/                   # exported ONNX graphs (gitignored; scripts/export_onnx.sh)
+│   └── onnx/                   # exported ONNX graphs (gitignored; scripts/development/export_onnx.sh)
 │
 ├── docs/
 │   ├── PLAN.md                 # this file
@@ -158,7 +158,7 @@ stack dies with this port**: the patched state becomes plain first-party code.
 | `scripts/convert/*` | same-named `.py` files | drop `convert_sam2_to_ggml.py`, `convert_edgetam_to_ggml.py` |
 | `examples/e2e_check.cpp` | `examples/pcs_pvs_e2e_check.cpp` | unchanged |
 | `examples/quantize.cpp` | `examples/quantize.cpp` | unchanged |
-| `tests/goldens/`, `tests/data/` | `release/sam3/tests/goldens/` + `tests/cat.jpg` | regenerated via `scripts/make_goldens.sh` after port |
+| `tests/goldens/`, `tests/data/` | `release/sam3/tests/goldens/` + `tests/cat.jpg` | regenerated via `scripts/development/make_goldens.sh` after port |
 
 Size estimate: ~9–10k of the monolith's 15.6k lines survive (SAM3-only), plus ~620
 lines of TRT engine/runtime, split into the modules above. The split is mechanical —
@@ -193,7 +193,7 @@ struct sam3_trt_config {
 | Option | Default | Effect |
 |---|---|---|
 | `SAM3CPP_CUDA` | ON | ggml CUDA backend (`GGML_CUDA`) |
-| `SAM3CPP_TENSORRT` | OFF | compile `src/trt/`; needs `scripts/setup_tensorrt.sh` run once |
+| `SAM3CPP_TENSORRT` | OFF | compile `src/trt/`; needs `scripts/setup/setup_tensorrt.sh` run once |
 | `SAM3CPP_IMAGE_IO` | ON | compile `src/image_io.cpp` (stb `sam3_load_image`/`sam3_save_mask`); OFF = codec-free core (raw RGB only) |
 | `SAM3CPP_BUILD_EXAMPLES` | ON if top-level | e2e_check, segment_image, quantize |
 | `SAM3CPP_BUILD_TESTS` | ON if top-level | mask_utils_test; consume_test runs separately via `tests/consume_test/run.sh` |
@@ -228,7 +228,7 @@ SAM3CPP_TENSORRT=OFF` yields the pure-CPU golden-sample build. Include-guard idi
      bitwise IDENTICAL for PCS text (0.961892), PCS + exemplar box, PVS single point
      (iou 0.985920), PVS multi+negative points, PVS box. CPU old-vs-new: identical
      (see gate log in this commit's message). consume_test + mask_utils_test pass.
-3. **P2 — TensorRT** *(done)*: `src/trt/`, `setup_tensorrt.sh` (with a
+3. **P2 — TensorRT** *(done)*: `src/trt/`, `scripts/setup/setup_tensorrt.sh` (with a
    `--copy-from <dir>` fast path that hardlinks an already-vendored SDK),
    `sam3_trt_config` wired: captured by `sam3_load_model` via `sam3_params::trt`,
    consulted only when `.enabled` (env vars stay authoritative otherwise; the
@@ -243,7 +243,7 @@ SAM3CPP_TENSORRT=OFF` yields the pure-CPU golden-sample build. Include-guard idi
    Not yet exercised: engine build from scratch (P3's gate regenerates ONNX and
    rebuilds engines end-to-end).
 4. **P3 — tooling** *(done)*: `scripts/convert/` (7 Python files; SAM2/EdgeTAM
-   converters dropped), `scripts/export_onnx.sh` (dump tools → all 3 graphs in
+   converters dropped), `scripts/development/export_onnx.sh` (dump tools → all 3 graphs in
    one command, `--fp8-amax` for the FP8 variant), `examples/dump_*_weights.cpp`.
    `fp8_inject_qdq.py` gained a memory fix: weight initializers are swapped for
    zero-payload stubs around the opset 13→19 version conversion (the converter
@@ -260,7 +260,7 @@ SAM3CPP_TENSORRT=OFF` yields the pure-CPU golden-sample build. Include-guard idi
    the sam3-ui-server (~3.5 GB VRAM) first, or tactics get skipped for memory
    and the resulting engine is slower (a starved build produced a 494 MB
    encoder engine vs the normal 946 MB).
-5. **P4 — golden process + tests** *(done)*: `scripts/make_goldens.sh` (one
+5. **P4 — golden process + tests** *(done)*: `scripts/development/make_goldens.sh` (one
    command regenerates the CPU-reference goldens over the 3-case prompt table),
    `tests/parity_test.sh` (CUDA always; TensorRT via `--trt-onnx-dir`/
    `--trt-cache-dir`), `tests/data/cat.jpg`, committed `tests/goldens/`,

@@ -6,10 +6,12 @@
 cmake_minimum_required(VERSION 3.18)
 
 # Diamond-inclusion guard: two consumers may add_subdirectory() this library.
-if(DEFINED SAM3CPP_INCLUDED)
+# Use a target check rather than a CACHE sentinel: cached sentinels survive a
+# later configure and used to make this whole file return before defining the
+# library.
+if(TARGET sam3cpp)
     return()
 endif()
-set(SAM3CPP_INCLUDED TRUE CACHE INTERNAL "sam3cpplib already added")
 
 project(sam3cpplib VERSION 1.0.0 LANGUAGES C CXX)
 
@@ -28,7 +30,7 @@ endif()
 
 # ── Options ─────────────────────────────────────────────────────────────────
 option(SAM3CPP_CUDA          "Enable the ggml CUDA backend"                        ON)
-option(SAM3CPP_TENSORRT      "Build the TensorRT backend (run scripts/setup_tensorrt.sh once first)" OFF)
+option(SAM3CPP_TENSORRT      "Build the TensorRT backend (run scripts/setup/setup_tensorrt.sh once first)" OFF)
 option(SAM3CPP_IMAGE_IO      "Compile the stb-backed sam3_load_image/sam3_save_mask helpers" ON)
 option(SAM3CPP_BUILD_EXAMPLES "Build example executables"  ${SAM3CPP_TOP_LEVEL})
 option(SAM3CPP_BUILD_TESTS    "Build test executables"     ${SAM3CPP_TOP_LEVEL})
@@ -92,9 +94,9 @@ if(SAM3CPP_TENSORRT)
     target_compile_definitions(sam3cpp PRIVATE SAM3_TRT_ENCODER)
 
     set(SAM3CPP_TRT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tensorrt-include"
-        CACHE PATH "TensorRT public headers (NvInfer.h etc.), from scripts/setup_tensorrt.sh")
+        CACHE PATH "TensorRT public headers (NvInfer.h etc.), from scripts/setup/setup_tensorrt.sh")
     set(SAM3CPP_TRT_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tensorrt-libs"
-        CACHE PATH "TensorRT runtime .so location, from scripts/setup_tensorrt.sh")
+        CACHE PATH "TensorRT runtime .so location, from scripts/setup/setup_tensorrt.sh")
 
     find_path(SAM3CPP_TRT_INCLUDE_PATH NvInfer.h PATHS ${SAM3CPP_TRT_INCLUDE_DIR} REQUIRED)
     find_library(SAM3CPP_TRT_NVINFER nvinfer PATHS ${SAM3CPP_TRT_LIB_DIR} REQUIRED)
@@ -111,5 +113,8 @@ if(SAM3CPP_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 if(SAM3CPP_BUILD_TESTS)
+    # Must be enabled at the top-level build directory so `ctest --test-dir
+    # build` discovers tests registered by the child directory.
+    enable_testing()
     add_subdirectory(tests)
 endif()

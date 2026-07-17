@@ -8,11 +8,11 @@
 # run takes a few minutes. Regenerate only when the model file or the
 # reference CPU implementation intentionally changes.
 #
-# Usage: scripts/make_goldens.sh --model resources/models/sam3-q8_0.ggml [--build build]
+# Usage: scripts/development/make_goldens.sh --model resources/models/sam3-q8_0.ggml [--build build]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 MODEL=""
 BUILD_DIR="$ROOT_DIR/build"

@@ -11,7 +11,7 @@
 // Same contract as the encoder switch: per-state, both engines resident
 // once used, free to flip, graceful fallback with a stderr log.
 //
-// Needs a SAM3CPP_TENSORRT build + sam3_pcs_fp8.onnx (scripts/export_onnx.sh
+// Needs a SAM3CPP_TENSORRT build + sam3_pcs_fp8.onnx (scripts/development/export_onnx.sh
 // --pcs-fp8-amax resources/fp8_pcs_amax_sam3-q8_0.json).
 //
 // Usage: sam3cpp_ex_10_pcs_fp8 <model.ggml> <image> <onnx-dir> <cache-dir>

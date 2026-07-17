@@ -1,9 +1,9 @@
 # TensorRT backend: precision map, FP8, engines
 
-Build once: `scripts/setup_tensorrt.sh` (vendors TensorRT 10.13.3 headers +
+Build once: `scripts/setup/setup_tensorrt.sh` (vendors TensorRT 10.13.3 headers +
 runtime libs), then `cmake -B build -DSAM3CPP_TENSORRT=ON`. Engines are built
 from the ONNX graphs on first use and cached (key = ONNX bytes + GPU + TRT
-version + precision config); export the graphs with `scripts/export_onnx.sh`.
+version + precision config); export the graphs with `scripts/development/export_onnx.sh`.
 
 ## Per-subsystem precision map
 
@@ -64,7 +64,7 @@ python3 scripts/convert/fp8_pcs_amax_calib.py sam3_pcs.onnx calib/ pcs_amax.json
 # a validated PCS amax ships at resources/fp8_pcs_amax_sam3-q8_0.json
 
 # 3. Or all at once through the exporter:
-scripts/export_onnx.sh --model model.ggml \
+scripts/development/export_onnx.sh --model model.ggml \
     --fp8-amax resources/fp8_amax_sam3-q8_0.json \
     --pcs-fp8-amax resources/fp8_pcs_amax_sam3-q8_0.json
 ```

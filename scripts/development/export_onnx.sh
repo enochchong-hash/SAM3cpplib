@@ -9,12 +9,12 @@
 # and the dump tools from a SAM3CPP_BUILD_EXAMPLES=ON build.
 #
 # Usage:
-#   scripts/export_onnx.sh --model resources/models/sam3-q8_0.ggml \
+#   scripts/development/export_onnx.sh --model resources/models/sam3-q8_0.ggml \
 #       [--out resources/onnx] [--build build] [--fp8-amax amax.json] [--check]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 MODEL=""
 OUT_DIR="$ROOT_DIR/resources/onnx"
@@ -50,7 +50,7 @@ echo "==> Dumping encoder weights (ViT + necks)"
 echo "==> Dumping PCS/PVS head weights"
 "$DUMP_HEADS" --model "$MODEL" --out "$WORK/heads"
 
-CV="$SCRIPT_DIR/convert"
+CV="$SCRIPT_DIR/../convert"
 echo "==> Authoring sam3_encoder.onnx"
 python3 "$CV/convert_sam3_encoder_to_onnx.py" --export-dir "$WORK/encoder" --out "$OUT_DIR/sam3_encoder.onnx" $CHECK_FLAG
 echo "==> Authoring sam3_pcs.onnx"

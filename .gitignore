@@ -6,7 +6,7 @@ tests/consume_test/build/
 # Runtime artifacts (TensorRT engine caches, logs, pids)
 var/
 
-# TensorRT SDK is vendored by scripts/setup_tensorrt.sh, never committed
+# TensorRT SDK is vendored by scripts/setup/setup_tensorrt.sh, never committed
 3rdparty/tensorrt-include/
 3rdparty/tensorrt-libs/
 

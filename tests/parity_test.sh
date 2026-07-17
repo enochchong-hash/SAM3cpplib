@@ -1,6 +1,6 @@
 #!/bin/bash
 # Backend parity gate: run the standard prompt cases (same table as
-# scripts/make_goldens.sh) on the CUDA backend -- and on TensorRT when
+# scripts/development/make_goldens.sh) on the CUDA backend -- and on TensorRT when
 # SAM3_TRT_* / --trt args are configured -- and compare against the CPU
 # goldens in tests/goldens/.
 #
@@ -40,7 +40,7 @@ done
 E2E="$BUILD_DIR/examples/sam3cpp_e2e_check"
 IMG="$ROOT_DIR/tests/data/cat.jpg"
 GOLD="$ROOT_DIR/tests/goldens"
-[[ -x "$E2E" && -f "$IMG" && -d "$GOLD" ]] || { echo "need built e2e_check, tests/data/cat.jpg and tests/goldens (scripts/make_goldens.sh)" >&2; exit 1; }
+[[ -x "$E2E" && -f "$IMG" && -d "$GOLD" ]] || { echo "need built e2e_check, tests/data/cat.jpg and tests/goldens (scripts/development/make_goldens.sh)" >&2; exit 1; }
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT

@@ -77,7 +77,7 @@ Three execution backends exist for the pipeline as a whole:
 |---|---|---|---|
 | ggml **CPU** | always in | `sam3_params::use_gpu = false` | numerical reference; generates `tests/goldens/` (~35 s/encode) |
 | ggml **CUDA** | `SAM3CPP_CUDA=ON` (default) | `use_gpu = true` (default) | portable GPU path (~0.9 s encode / 220 ms PCS / 65 ms PVS) |
-| **TensorRT** | `SAM3CPP_TENSORRT=ON` + `scripts/setup_tensorrt.sh` | `sam3_params::trt.enabled` or `SAM3_TRT_ENCODER=1` (per-engine ONNX paths, see below) | fast path (~120 / 36 / 7 ms); per-subsystem precision options |
+| **TensorRT** | `SAM3CPP_TENSORRT=ON` + `scripts/setup/setup_tensorrt.sh` | `sam3_params::trt.enabled` or `SAM3_TRT_ENCODER=1` (per-engine ONNX paths, see below) | fast path (~120 / 36 / 7 ms); per-subsystem precision options |
 
 TensorRT granularity is **three engines** — encoder, PCS head, PVS head —
 each independently configured; a stage without an engine falls back to ggml

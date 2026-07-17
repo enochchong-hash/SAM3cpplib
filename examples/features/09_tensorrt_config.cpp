@@ -1,8 +1,8 @@
 // 09 — TensorRT: programmatic configuration + FP16/FP8 runtime switch
 //
 // Requires a library built with -DSAM3CPP_TENSORRT=ON (after
-// scripts/setup_tensorrt.sh) and the exported ONNX graphs
-// (scripts/export_onnx.sh). Without that build this example still runs --
+// scripts/setup/setup_tensorrt.sh) and the exported ONNX graphs
+// (scripts/development/export_onnx.sh). Without that build this example still runs --
 // on the ggml backend, with a note.
 //
 // An embedded host app configures TensorRT through sam3_params::trt instead

@@ -53,6 +53,23 @@ measured accuracy/speed trade-off of every choice:
 
 ## Build
 
+For a fresh standalone clone, the included bootstrap initializes ggml,
+downloads the same ready-to-use checkpoint as `release/sam3`, detects CUDA
+when available, and falls back to CPU when it is not:
+
+```bash
+git clone --recurse-submodules <sam3cpplib-url>
+cd sam3cpplib
+./scripts/setup.sh --backend auto --model q8_0
+```
+
+For separate steps, use `./scripts/download_models.sh q8_0` followed by
+`./scripts/build.sh auto`. See [docs/deployment.md](docs/deployment.md) for
+offline/mirrored checkpoints, CUDA version discovery, diagnostics, and the
+optional TensorRT setup.
+The complete public/internal command map is in
+[scripts/README.md](scripts/README.md).
+
 ```bash
 git submodule update --init 3rdparty/ggml
 export PATH=/usr/local/cuda/bin:$PATH   # for the CUDA backend
@@ -74,8 +91,9 @@ tests/parity_test.sh --model resources/models/sam3-q8_0.ggml \
 ./build/examples/sam3cpp_ex_01_load_and_encode sam3-q8_0.ggml tests/data/cat.jpg
 ```
 
-For TensorRT: `./scripts/setup_tensorrt.sh` once (or `--copy-from <dir>` to
-reuse an already-vendored SDK), then configure with `-DSAM3CPP_TENSORRT=ON`.
+For TensorRT, the public `./scripts/setup.sh --backend cuda --trt` workflow
+installs the SDK and builds the backend. Advanced/manual setup is documented
+in [scripts/README.md](scripts/README.md).
 
 Key CMake options: `SAM3CPP_CUDA` (ON), `SAM3CPP_TENSORRT` (OFF),
 `SAM3CPP_IMAGE_IO` (ON; OFF = codec-free core, raw RGB in / raw masks out).
@@ -87,6 +105,7 @@ Key CMake options: `SAM3CPP_CUDA` (ON), `SAM3CPP_TENSORRT` (OFF),
 | [docs/architecture.md](docs/architecture.md) | **system overview**: pipeline, all 8 subsystems, the per-subsystem options matrix, source map |
 | [docs/api.md](docs/api.md) | public API reference (lifecycle, partial inference, accessors, TRT config) |
 | [docs/tensorrt.md](docs/tensorrt.md) | precision map + rationale, the two FP8 opt-ins, generating FP8 graphs, engine caching |
+| [docs/deployment.md](docs/deployment.md) | fresh-system setup, model acquisition, CUDA discovery, offline deployment |
 | [docs/goldens.md](docs/goldens.md) | the golden-sample process and parity tolerances |
 | [examples/README.md](examples/README.md) | runnable per-feature tour (01–10) |
 | [docs/PLAN.md](docs/PLAN.md) | the extraction plan and phase-gate history (P0–P5) |

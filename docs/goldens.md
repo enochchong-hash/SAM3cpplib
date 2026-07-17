@@ -10,7 +10,7 @@ CUDA, TensorRT FP16, TensorRT FP8) is judged against.
 | Piece | Role |
 |---|---|
 | `tests/data/cat.jpg` | the standard test image (1200x1198) |
-| `scripts/make_goldens.sh` | runs the CPU backend over the case table, writes `tests/goldens/<case>/{pcs,pvs}_detections.txt` |
+| `scripts/development/make_goldens.sh` | runs the CPU backend over the case table, writes `tests/goldens/<case>/{pcs,pvs}_detections.txt` |
 | `tests/goldens/` | committed reference outputs (regenerate only on intentional model/reference changes) |
 | `tests/parity_test.sh` | runs the same cases on CUDA (+ TensorRT with `--trt-onnx-dir/--trt-cache-dir`) and compares against the goldens |
 
@@ -37,7 +37,7 @@ same weights); the tolerances exist for the cross-backend comparisons.
 
 ```bash
 # once per model / intentional reference change (slow: CPU encodes)
-scripts/make_goldens.sh --model resources/models/sam3-q8_0.ggml
+scripts/development/make_goldens.sh --model resources/models/sam3-q8_0.ggml
 
 # every change (CUDA only)
 tests/parity_test.sh --model resources/models/sam3-q8_0.ggml

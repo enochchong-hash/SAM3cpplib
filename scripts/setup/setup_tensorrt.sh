@@ -16,19 +16,42 @@ TRT_PIP_VERSION="10.13.3.9"
 ONNX_TRT_COMMIT="9a9f7883dd7b8cb0a718395bac2075fab6f97da8"  # parsers/onnx pin at $TRT_TAG
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 INCLUDE_DIR="$ROOT_DIR/3rdparty/tensorrt-include"
 LIB_DIR="$ROOT_DIR/3rdparty/tensorrt-libs"
 
+usage() {
+    cat <<'EOF'
+Usage: scripts/setup/setup_tensorrt.sh [--copy-from PATH]
+
+With no arguments, download the pinned TensorRT headers and CUDA 12 runtime
+libraries. --copy-from imports an existing vendored SDK from a directory that
+contains tensorrt-include/ and tensorrt-libs/.
+EOF
+}
+
+case "${1:-}" in
+    "") ;;
+    --help) usage; exit 0 ;;
+    --copy-from)
+        [[ $# -eq 2 && -n "${2:-}" ]] || { usage >&2; exit 2; }
+        ;;
+    *) echo "Error: unknown option: $1" >&2; usage >&2; exit 2 ;;
+esac
+
 # Fast path: --copy-from <dir> hardlink-copies an existing vendored SDK
 # (e.g. another checkout's 3rdparty/) instead of downloading ~2.7GB again.
-if [ "${1:-}" = "--copy-from" ] && [ -n "${2:-}" ]; then
+if [[ "${1:-}" == "--copy-from" ]]; then
     SRC="$(cd "$2" && pwd)"
+    [[ -d "$SRC/tensorrt-include" && -d "$SRC/tensorrt-libs" ]] || {
+        echo "Error: $SRC must contain tensorrt-include/ and tensorrt-libs/" >&2
+        exit 1
+    }
     echo "==> Copying vendored TensorRT SDK from $SRC (hardlinks where possible)"
     rm -rf "$INCLUDE_DIR" "$LIB_DIR"
     cp -al "$SRC/tensorrt-include" "$INCLUDE_DIR" 2>/dev/null || cp -a "$SRC/tensorrt-include" "$INCLUDE_DIR"
     cp -al "$SRC/tensorrt-libs" "$LIB_DIR" 2>/dev/null || cp -a "$SRC/tensorrt-libs" "$LIB_DIR"
-    echo "==> Done. Build with: cmake -B build -DSAM3CPP_TENSORRT=ON"
+    echo "==> Done. Build with: ./scripts/build.sh cuda --trt"
     exit 0
 fi
 
@@ -82,4 +105,4 @@ done
 echo "==> Done."
 echo "    Headers: $INCLUDE_DIR"
 echo "    Libs:    $LIB_DIR"
-echo "    Build with: cmake -B build -DSAM3CPP_TENSORRT=ON"
+echo "    Build with: ./scripts/build.sh cuda --trt"

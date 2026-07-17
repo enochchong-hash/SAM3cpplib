@@ -6,7 +6,7 @@ Two kinds of programs live here:
   library feature, numbered in reading order. Start here.
 - **Tooling/validation programs** (`e2e_check`, `segment_image`, `quantize`,
   `dump_*_weights`) — used by the parity gates and the ONNX export pipeline
-  (`docs/goldens.md`, `scripts/export_onnx.sh`).
+  (`docs/goldens.md`, `scripts/development/export_onnx.sh`).
 
 ## Build & run
 
