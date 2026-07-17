@@ -87,13 +87,21 @@ loudly).
 Per-subsystem precision options on the TensorRT path (the full rationale
 table is in [tensorrt.md](tensorrt.md)):
 
+Subsystems [2]–[6] compile into ONE TensorRT engine; its base mode comes
+from `pcs_precision` (`SAM3_TRT_PCS_PRECISION` = `fp32` | `fp16` |
+`mixed:<name-substrings>`, default `mixed:text_` = text FP32, rest FP16).
+The FP8 entries below are per-state overlays on that base mode.
+
 | Subsystem | Options | Default | How to switch |
 |---|---|---|---|
-| Image encoder [1] | **FP16 / FP8** | FP16 | `sam3_set_encoder_fp8(state, true)` per state; engines from `encoder_onnx` / `encoder_onnx_fp8` (`SAM3_TRT_ONNX_PATH[_FP8]`) |
-| PCS text encoder [2] | FP32 only | FP32 | fixed (precision floor) — pinned via `pcs_precision = "mixed:text_"` |
-| PCS heads [3]–[6] | **whole-graph FP32 / FP16 / mixed** | `mixed:text_` (text FP32, rest FP16 + fused MHA) | `pcs_precision` field / `SAM3_TRT_PCS_PRECISION` = `fp32` \| `fp16` \| `mixed:<name-substrings>` |
-| PCS fenc+ddec linear GEMMs [4][5] | opt-in **FP8** on top of the mode above | off | `sam3_set_pcs_fp8(state, true)` per state; engine from `pcs_onnx_fp8` (`SAM3_TRT_PCS_ONNX_PATH_FP8`) |
-| PVS [7][8] | FP32 only | FP32 | fixed (precision floor: FP16 diverges on negative points) |
+| [1] Image encoder | FP16 / FP8 | FP16 | `sam3_set_encoder_fp8(state, true)` per state; engines from `encoder_onnx` / `encoder_onnx_fp8` (`SAM3_TRT_ONNX_PATH[_FP8]`) |
+| [2] PCS text encoder | FP32 only | FP32 | fixed (precision floor) — kept FP32 by the default `mixed:text_` |
+| [3] PCS geometry encoder | FP16 / FP32 | FP16 | `pcs_precision` (base mode of the shared PCS engine) |
+| [4] PCS fusion encoder | FP16 + fused MHA / FP32; weight matmuls (Q/K/V/out + FFN) additionally FP8 | FP16, FP8 off | base: `pcs_precision`; FP8 overlay: `sam3_set_pcs_fp8(state, true)` per state, engine from `pcs_onnx_fp8` (`SAM3_TRT_PCS_ONNX_PATH_FP8`) |
+| [5] PCS DETR decoder + scoring | FP16 / FP32; attention/FFN weight matmuls additionally FP8 (bbox/RPB/scoring MLPs stay FP16) | FP16, FP8 off | same two knobs as [4] (one engine, one overlay) |
+| [6] PCS seg head | FP16 / FP32 | FP16 | `pcs_precision` |
+| [7] PVS prompt encoder | FP32 only | FP32 | fixed (precision floor: FP16 diverges on negative points) |
+| [8] PVS SAM mask decoder | FP32 only | FP32 | fixed (same engine and floor as [7]) |
 
 Terminology for that FP8 row: a transformer layer has two kinds of matmul.
 **Linear GEMMs** multiply activations by a *fixed weight matrix* (the

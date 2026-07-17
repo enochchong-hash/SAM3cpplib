@@ -39,14 +39,21 @@ it lives in the source: **[docs/architecture.md](docs/architecture.md)**.
 
 ## Subsystem options at a glance
 
+One row per subsystem; **bold = default**. Subsystems [2]–[6] run as one
+TensorRT engine whose base mode is set by `pcs_precision`
+(`SAM3_TRT_PCS_PRECISION`); the FP8 rows are per-state overlays on top of it.
+
 | Subsystem | Options | Switch |
 |---|---|---|
-| Whole pipeline | ggml CPU / ggml CUDA / TensorRT | `use_gpu`, `SAM3CPP_TENSORRT` build + `sam3_params::trt` or `SAM3_TRT_*` env |
-| [1] Image encoder | FP16 / **FP8** | `sam3_set_encoder_fp8(state, bool)` per state |
-| [2] Text encoder | FP32 only (precision floor) | — |
-| [3]–[6] PCS heads | FP32 / FP16 / `mixed:text_` (default) | `pcs_precision` / `SAM3_TRT_PCS_PRECISION` |
-| [4]+[5] weight matmuls (linear GEMMs: Q/K/V/out projections + FFN) | opt-in **FP8**, layered on top of the PCS mode above; attention matmuls stay FP16-fused | `sam3_set_pcs_fp8(state, bool)` per state |
-| [7]+[8] PVS | FP32 only (precision floor) | — |
+| Whole pipeline | ggml CPU / **ggml CUDA** / TensorRT | `use_gpu`; `SAM3CPP_TENSORRT` build + `sam3_params::trt` or `SAM3_TRT_*` env |
+| [1] Image encoder | **FP16** / FP8 | `sam3_set_encoder_fp8(state, bool)` per state |
+| [2] Text encoder | FP32 only (precision floor) | — (kept FP32 by the default `mixed:text_`) |
+| [3] Geometry encoder | **FP16** / FP32 | `pcs_precision` |
+| [4] Fusion encoder | **FP16 + fused MHA** / FP32; weight matmuls (Q/K/V/out + FFN) additionally FP8 | `pcs_precision`; `sam3_set_pcs_fp8(state, bool)` per state |
+| [5] DETR decoder + scoring | **FP16** / FP32; attention/FFN weight matmuls additionally FP8 (bbox/RPB/scoring MLPs stay FP16) | `pcs_precision`; `sam3_set_pcs_fp8(state, bool)` per state |
+| [6] Seg head | **FP16** / FP32 | `pcs_precision` |
+| [7] PVS prompt encoder | FP32 only (precision floor) | — |
+| [8] PVS SAM mask decoder | FP32 only (precision floor) | — |
 | Weights (.ggml, all backends) | f32 / f16 / q4_0 / q4_1 / **q8_0** (production) | `examples/quantize.cpp` |
 
 The full options matrix with defaults, env-var↔config mapping, and the
