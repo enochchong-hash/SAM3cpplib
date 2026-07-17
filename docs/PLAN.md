@@ -180,6 +180,7 @@ consumers (a host app should not have to mutate its own environment):
 struct sam3_trt_config {
     std::string encoder_onnx, encoder_onnx_fp8;   // empty = disabled
     std::string pcs_onnx, pvs_onnx;
+    std::string runtime_data;                     // thin .sam3rt serving sidecar
     std::string cache_dir;                        // engine cache root
     std::string pcs_precision = "mixed:text_";
     bool        skip_ggml_weights = true;         // TRT-only deployments
@@ -187,6 +188,10 @@ struct sam3_trt_config {
 // passed via sam3_params; env vars (SAM3_TRT_*) remain honored as fallback
 // so release/sam3's start scripts keep working untouched.
 ```
+
+When `runtime_data` is configured, the serving process does not open the full
+GGML checkpoint. The sidecar is generated alongside the ONNX graphs and holds
+only hyperparameters, tokenizer data, and CPU-side TRT request helpers.
 
 ## Build options
 

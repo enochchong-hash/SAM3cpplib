@@ -3,6 +3,7 @@
 #   sam3_encoder.onnx  (ViT + SimpleFPN neck, static 1008x1008)
 #   sam3_pcs.onnx      (text/exemplar head, dynamic geometry tokens)
 #   sam3_pvs.onnx      (point/box head, dynamic sparse tokens)
+#   sam3_runtime.sam3rt (thin TRT runtime data; no full checkpoint at serving time)
 #   sam3_encoder_fp8.onnx  (only with --fp8-amax; E4M3 Q/DQ injection)
 #
 # Offline tooling only -- never used at runtime. Needs python3 with numpy+onnx
@@ -51,6 +52,8 @@ echo "==> Dumping PCS/PVS head weights"
 "$DUMP_HEADS" --model "$MODEL" --out "$WORK/heads"
 
 CV="$SCRIPT_DIR/../convert"
+echo "==> Extracting thin TensorRT runtime data"
+python3 "$CV/extract_sam3_trt_runtime.py" "$MODEL" "$OUT_DIR/sam3_runtime.sam3rt"
 echo "==> Authoring sam3_encoder.onnx"
 python3 "$CV/convert_sam3_encoder_to_onnx.py" --export-dir "$WORK/encoder" --out "$OUT_DIR/sam3_encoder.onnx" $CHECK_FLAG
 echo "==> Authoring sam3_pcs.onnx"

@@ -76,9 +76,10 @@ static void sam3_register_tensors(sam3_model& model) {
     auto& tensors = model.tensors;
     auto ctx = model.ctx;
 
-    // SAM3_TRT_SKIP_GGML_WEIGHTS: register only sam_pe.* (see the flag's doc
-    // on sam3_model). A skipped tensor is never created in the ctx, so
-    // ggml_backend_alloc_ctx_tensors below allocates ~7KB instead of ~1.1GB;
+    // SAM3_TRT_SKIP_GGML_WEIGHTS: register only sam_pe.* and the geometry-input
+    // helpers used by TRT request preparation (see the flag's doc on
+    // sam3_model). A skipped tensor is never created in the ctx, so backend
+    // allocation stays around 13MB instead of ~1.1GB;
     // the corresponding model struct fields stay nullptr and the loader
     // seeks past their file data. Any registration this predicate rejects
     // MUST be matched by a trt_only_weights guard on every compute path
@@ -335,60 +336,42 @@ static void sam3_register_tensors(sam3_model& model) {
 
     // Reference points, norms, bbox embed, ref_point_head, boxRPB, presence_head
     // These use the exact checkpoint names after renaming
-    tensors["ddec.reference_points.weight"] = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 4, NQ);
-    ggml_set_name(tensors["ddec.reference_points.weight"], "ddec.reference_points.weight");
-    tensors["ddec.norm.weight"] = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, D);
-    ggml_set_name(tensors["ddec.norm.weight"], "ddec.norm.weight");
-    tensors["ddec.norm.bias"] = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, D);
-    ggml_set_name(tensors["ddec.norm.bias"], "ddec.norm.bias");
+    T2f("ddec.reference_points.weight", 4, NQ);
+    T1f("ddec.norm.weight", D);
+    T1f("ddec.norm.bias", D);
 
     // bbox_embed MLP (3 layers: 256→256→256→4)
     for (int j = 0; j < 3; ++j) {
         int out = (j == 2) ? 4 : D;
         auto bp = "ddec.bbox_embed.layers." + std::to_string(j);
-        tensors[bp + ".weight"] = ggml_new_tensor_2d(ctx, WTYPE, D, out);
-        ggml_set_name(tensors[bp + ".weight"], (bp + ".weight").c_str());
-        tensors[bp + ".bias"] = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, out);
-        ggml_set_name(tensors[bp + ".bias"], (bp + ".bias").c_str());
+        T2(bp + ".weight", D, out);
+        T1f(bp + ".bias", out);
     }
 
     // ref_point_head MLP (2 layers: 512→256→256)
-    tensors["ddec.ref_point_head.layers.0.weight"] = ggml_new_tensor_2d(ctx, WTYPE, 512, D);
-    tensors["ddec.ref_point_head.layers.0.bias"] = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, D);
-    tensors["ddec.ref_point_head.layers.1.weight"] = ggml_new_tensor_2d(ctx, WTYPE, D, D);
-    tensors["ddec.ref_point_head.layers.1.bias"] = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, D);
-    for (auto& kv : std::vector<std::string>{
-             "ddec.ref_point_head.layers.0.weight", "ddec.ref_point_head.layers.0.bias",
-             "ddec.ref_point_head.layers.1.weight", "ddec.ref_point_head.layers.1.bias"})
-        ggml_set_name(tensors[kv], kv.c_str());
+    T2("ddec.ref_point_head.layers.0.weight", 512, D);
+    T1f("ddec.ref_point_head.layers.0.bias", D);
+    T2("ddec.ref_point_head.layers.1.weight", D, D);
+    T1f("ddec.ref_point_head.layers.1.bias", D);
 
     // boxRPB MLPs (x and y, each 2 layers)
     for (const auto& axis : {"x", "y"}) {
         auto bp = std::string("ddec.boxRPB_embed_") + axis;
-        tensors[bp + ".layers.0.weight"] = ggml_new_tensor_2d(ctx, (2 % WBLK == 0) ? WTYPE : GGML_TYPE_F32, 2, D);
-        tensors[bp + ".layers.0.bias"] = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, D);
-        tensors[bp + ".layers.1.weight"] = ggml_new_tensor_2d(ctx, WTYPE, D, hp.ddec_heads);
-        tensors[bp + ".layers.1.bias"] = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, hp.ddec_heads);
-        for (int j = 0; j < 2; ++j) {
-            auto l = bp + ".layers." + std::to_string(j);
-            ggml_set_name(tensors[l + ".weight"], (l + ".weight").c_str());
-            ggml_set_name(tensors[l + ".bias"], (l + ".bias").c_str());
-        }
+        T2(bp + ".layers.0.weight", 2, D);
+        T1f(bp + ".layers.0.bias", D);
+        T2(bp + ".layers.1.weight", D, hp.ddec_heads);
+        T1f(bp + ".layers.1.bias", hp.ddec_heads);
     }
 
     // presence_token_head MLP (3 layers: 256→256→256→1)
     for (int j = 0; j < 3; ++j) {
         int out = (j == 2) ? 1 : D;
         auto bp = "ddec.presence_token_head.layers." + std::to_string(j);
-        tensors[bp + ".weight"] = ggml_new_tensor_2d(ctx, WTYPE, D, out);
-        ggml_set_name(tensors[bp + ".weight"], (bp + ".weight").c_str());
-        tensors[bp + ".bias"] = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, out);
-        ggml_set_name(tensors[bp + ".bias"], (bp + ".bias").c_str());
+        T2(bp + ".weight", D, out);
+        T1f(bp + ".bias", out);
     }
-    tensors["ddec.presence_token_out_norm.weight"] = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, D);
-    tensors["ddec.presence_token_out_norm.bias"] = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, D);
-    ggml_set_name(tensors["ddec.presence_token_out_norm.weight"], "ddec.presence_token_out_norm.weight");
-    ggml_set_name(tensors["ddec.presence_token_out_norm.bias"], "ddec.presence_token_out_norm.bias");
+    T1f("ddec.presence_token_out_norm.weight", D);
+    T1f("ddec.presence_token_out_norm.bias", D);
 
     // DETR decoder layers
     for (int i = 0; i < hp.ddec_layers; ++i) {
@@ -703,7 +686,7 @@ static bool sam3_load_tensors(std::ifstream& fin, sam3_model& model, int n_tenso
             // Unregistered records are skipped: the tracker weights that SAM3
             // containers carry (mem_enc.*, mem_attn.*, obj_ptr*, ...) are
             // deliberately not registered, and SAM3_TRT_SKIP_GGML_WEIGHTS
-            // additionally unregisters everything but sam_pe.*.
+            // additionally unregisters everything but TRT request helpers.
             fin.seekg(bytes, std::ios::cur);
             ++n_skipped;
             continue;
@@ -776,11 +759,26 @@ static bool sam3_load_tensors(std::ifstream& fin, sam3_model& model, int n_tenso
 *****************************************************************************/
 
 std::shared_ptr<sam3_model> sam3_load_model(const sam3_params& params) {
-    fprintf(stderr, "%s: loading model from '%s'\n", __func__, params.model_path.c_str());
+    std::string load_path = params.model_path;
+    bool expect_trt_runtime_data = false;
+#ifdef SAM3_TRT_ENCODER
+    if (params.trt.enabled && !params.trt.runtime_data.empty()) {
+        load_path = params.trt.runtime_data;
+        expect_trt_runtime_data = true;
+    } else if (const char* p = getenv("SAM3_TRT_RUNTIME_DATA_PATH")) {
+        if (*p != '\0') {
+            load_path = p;
+            expect_trt_runtime_data = true;
+        }
+    }
+#endif
+    fprintf(stderr, "%s: loading %s from '%s'\n", __func__,
+            expect_trt_runtime_data ? "TensorRT runtime data" : "model",
+            load_path.c_str());
 
-    std::ifstream fin(params.model_path, std::ios::binary);
+    std::ifstream fin(load_path, std::ios::binary);
     if (!fin) {
-        fprintf(stderr, "%s: failed to open '%s'\n", __func__, params.model_path.c_str());
+        fprintf(stderr, "%s: failed to open '%s'\n", __func__, load_path.c_str());
         return nullptr;
     }
 
@@ -792,15 +790,26 @@ std::shared_ptr<sam3_model> sam3_load_model(const sam3_params& params) {
     fin.read(reinterpret_cast<char*>(&ftype), 4);
     fin.read(reinterpret_cast<char*>(&n_tensors), 4);
 
+    const bool is_trt_runtime_data = magic == SAM3_TRT_MAGIC;
     if (magic == SAM2_MAGIC) {
         fprintf(stderr, "%s: SAM2/EdgeTAM model files are not supported by sam3cpplib "
                         "(video tracking was deliberately not ported; use the upstream "
                         "sam3.cpp library for those)\n", __func__);
         return nullptr;
     }
-    if (magic != SAM3_MAGIC) {
-        fprintf(stderr, "%s: unknown magic: 0x%08x (expected sam3=0x%08x)\n",
-                __func__, magic, SAM3_MAGIC);
+    if (magic != SAM3_MAGIC && !is_trt_runtime_data) {
+        fprintf(stderr, "%s: unknown magic: 0x%08x (expected sam3=0x%08x or s3rt=0x%08x)\n",
+                __func__, magic, SAM3_MAGIC, SAM3_TRT_MAGIC);
+        return nullptr;
+    }
+    if (expect_trt_runtime_data && !is_trt_runtime_data) {
+        fprintf(stderr, "%s: '%s' is not a TensorRT runtime-data sidecar\n",
+                __func__, load_path.c_str());
+        return nullptr;
+    }
+    if (is_trt_runtime_data &&
+        !(params.trt.enabled || getenv("SAM3_TRT_ENCODER") != nullptr)) {
+        fprintf(stderr, "%s: TensorRT runtime data requires TensorRT to be enabled\n", __func__);
         return nullptr;
     }
     if (version != SAM3_FILE_VERSION) {
@@ -808,8 +817,9 @@ std::shared_ptr<sam3_model> sam3_load_model(const sam3_params& params) {
                 __func__, version, SAM3_FILE_VERSION);
         return nullptr;
     }
-    fprintf(stderr, "%s: SAM3 format v%d, ftype %d, %d tensors\n",
-            __func__, version, ftype, n_tensors);
+    fprintf(stderr, "%s: %s format v%d, ftype %d, %d tensors\n",
+            __func__, is_trt_runtime_data ? "SAM3 TRT runtime-data" : "SAM3",
+            version, ftype, n_tensors);
 
     auto model = std::make_shared<sam3_model>();
     {
@@ -883,7 +893,8 @@ std::shared_ptr<sam3_model> sam3_load_model(const sam3_params& params) {
     }
 
     // ── Register all tensor shapes ───────────────────────────────────────
-    bool skip_ggml_weights = getenv("SAM3_TRT_SKIP_GGML_WEIGHTS") != nullptr;
+    bool skip_ggml_weights = is_trt_runtime_data ||
+                             getenv("SAM3_TRT_SKIP_GGML_WEIGHTS") != nullptr;
 #ifdef SAM3_TRT_ENCODER
     // Programmatic TRT config: captured here (before any engine lookup);
     // env vars stay authoritative when params.trt.enabled is false.
@@ -894,7 +905,7 @@ std::shared_ptr<sam3_model> sam3_load_model(const sam3_params& params) {
 #endif
     if (skip_ggml_weights) {
         model->trt_only_weights = true;
-        fprintf(stderr, "%s: skip-ggml-weights requested -- loading only sam_pe.* weights; "
+        fprintf(stderr, "%s: TRT-only weights requested -- loading only prompt/geometry helpers; "
                         "ggml inference for encode/PCS/PVS is DISABLED (TensorRT engines "
                         "required, no fallback)\n", __func__);
     }
@@ -955,4 +966,3 @@ bool sam3_is_visual_only(const sam3_model& model) {
 sam3_model_type sam3_get_model_type(const sam3_model& model) {
     return model.hparams.model_type;
 }
-

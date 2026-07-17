@@ -84,6 +84,10 @@ each independently configured; a stage without an engine falls back to ggml
 CUDA unless `skip_ggml_weights` is set (deployed mode: no fallback, fail
 loudly).
 
+TRT-only deployments can additionally set `runtime_data` to the exported
+`sam3_runtime.sam3rt` sidecar. In that mode the full GGML checkpoint is not
+opened or scanned at serving time.
+
 Per-subsystem precision options on the TensorRT path (the full rationale
 table is in [tensorrt.md](tensorrt.md)):
 

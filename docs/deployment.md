@@ -60,11 +60,16 @@ keeps the code package small and separates these licenses.
 
 ## TensorRT is optional
 
-TensorRT does not replace the GGML checkpoint. The GGML file supplies model
-metadata, tokenizer data, and weights used by the complete implementation.
-TensorRT accelerates selected subgraphs using separately exported ONNX graphs
-and locally GPU-specific engine caches. Engine caches should be rebuilt on the
-deployment GPU rather than copied between unlike GPUs or TensorRT versions.
+TensorRT deployments do not need the full GGML checkpoint at serving time.
+The offline export produces `sam3_runtime.sam3rt`, an approximately 8 MB
+sidecar carrying the metadata, tokenizer, and remaining CPU helper tensors.
+Set `sam3_trt_config::runtime_data` and the loader will not open or scan the
+full checkpoint. The checkpoint remains necessary for offline ONNX/sidecar
+generation and for deployments that require GGML fallback.
+
+TensorRT uses separately exported ONNX graphs and locally GPU-specific engine
+caches. Engine caches should be rebuilt on the deployment GPU rather than
+copied between unlike GPUs or TensorRT versions.
 
 To vendor the pinned TensorRT development/runtime files and build support:
 

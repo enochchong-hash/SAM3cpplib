@@ -53,6 +53,7 @@
 
 static constexpr uint32_t SAM3_MAGIC     = 0x73616D33;  // "sam3"
 static constexpr uint32_t SAM2_MAGIC     = 0x73616D32;  // "sam2"
+static constexpr uint32_t SAM3_TRT_MAGIC = 0x74723373;  // "s3rt" (thin TRT runtime data)
 static constexpr uint32_t SAM3_TOK_MAGIC = 0x746F6B00;  // "tok\0"
 static constexpr int      SAM3_FILE_VERSION = 3;
 static constexpr int      SAM2_VERSION   = 1;
@@ -570,11 +571,11 @@ struct sam3_model {
     sam3_hparams        hparams;
     ggml_type           weight_type = GGML_TYPE_F16;
 
-    // SAM3_TRT_SKIP_GGML_WEIGHTS=1 (full-SAM3 models only): only the sam_pe.*
-    // prompt-encoder tensors (~7KB -- the one weight set the TensorRT path
-    // still reads on the CPU side, via sam3_populate_pe_cache) are registered
-    // and loaded; the other ~1.1GB of weights are skipped entirely, never
-    // allocated on the backend. Every ggml compute fallback for
+    // SAM3_TRT_SKIP_GGML_WEIGHTS=1 (full-SAM3 models only): only sam_pe.* and
+    // the geometry-input helper tensors are registered and loaded (~13MB
+    // backend allocation); the other ~1.1GB of weights are skipped entirely.
+    // A .sam3rt sidecar contains exactly this retained set and avoids opening
+    // or scanning the full checkpoint. Every ggml compute fallback for
     // encode/PCS/PVS checks this flag and hard-fails instead of running a
     // graph over absent weights. Only sane with SAM3_TRT_ENCODER built in
     // and all three engine env vars configured.

@@ -95,6 +95,10 @@ For TensorRT, the public `./scripts/setup.sh --backend cuda --trt` workflow
 installs the SDK and builds the backend. Advanced/manual setup is documented
 in [scripts/README.md](scripts/README.md).
 
+`scripts/development/export_onnx.sh` also emits a roughly 8 MB
+`sam3_runtime.sam3rt` sidecar. Configure `sam3_trt_config::runtime_data` to
+serve from that sidecar without opening or scanning the full GGML checkpoint.
+
 Key CMake options: `SAM3CPP_CUDA` (ON), `SAM3CPP_TENSORRT` (OFF),
 `SAM3CPP_IMAGE_IO` (ON; OFF = codec-free core, raw RGB in / raw masks out).
 

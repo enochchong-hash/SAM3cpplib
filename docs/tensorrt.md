@@ -44,12 +44,40 @@ Configuration (env var or `sam3_params::trt` field — struct wins when
 | PCS FP16 | `SAM3_TRT_PCS_ONNX_PATH` | `pcs_onnx` |
 | PCS FP8 | `SAM3_TRT_PCS_ONNX_PATH_FP8` | `pcs_onnx_fp8` |
 | PVS | `SAM3_TRT_PVS_ONNX_PATH` | `pvs_onnx` |
+| thin runtime data | `SAM3_TRT_RUNTIME_DATA_PATH` | `runtime_data` |
 | engine caches | `SAM3_TRT_*_CACHE_DIR` | `cache_dir` (+ `/encoder` `/pcs` `/pvs`) |
 | PCS mixed precision | `SAM3_TRT_PCS_PRECISION` | `pcs_precision` (default `mixed:text_`) |
 
 `mixed:text_` (pin every layer whose name starts with `text_` to FP32) stays
 in force for the FP8 PCS graph too — Q/DQ quantizes the fenc/ddec GEMMs while
 the precision constraint keeps the text encoder FP32.
+
+## Running without the full GGML checkpoint
+
+`scripts/development/export_onnx.sh` also emits `sam3_runtime.sam3rt`. It is a
+small, versioned serving sidecar containing only hyperparameters, the BPE
+tokenizer, and the CPU-side PVS/geometry helpers. Configure `runtime_data` (or
+`SAM3_TRT_RUNTIME_DATA_PATH`) and `sam3_load_model` will never open
+`sam3_params::model_path`:
+
+```cpp
+sam3_params params;
+params.trt.enabled      = true;
+params.trt.runtime_data = "deploy/sam3_runtime.sam3rt";
+params.trt.encoder_onnx = "deploy/sam3_encoder.onnx";
+params.trt.pcs_onnx     = "deploy/sam3_pcs.onnx";
+params.trt.pvs_onnx     = "deploy/sam3_pvs.onnx";
+```
+
+The sidecar can also be generated independently:
+
+```bash
+python3 scripts/convert/extract_sam3_trt_runtime.py \
+  sam3-q8_0.ggml sam3_runtime.sam3rt
+```
+
+The full checkpoint remains an offline export input and is only needed at
+runtime when GGML fallback is desired.
 
 ## Generating the FP8 graphs
 

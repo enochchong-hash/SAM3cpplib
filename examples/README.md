@@ -21,8 +21,10 @@ IMG=tests/data/cat.jpg           # bundled test image
 ./build/examples/sam3cpp_ex_01_load_and_encode $MODEL $IMG
 ```
 
-Every feature example takes positional arguments — `model.ggml` first,
-`image` second — and prints what it demonstrates. All of them run on the
+Most feature examples take positional arguments — `model.ggml` first,
+`image` second — and print what they demonstrate. Example 09 instead takes
+the image, ONNX/runtime-data directory, and engine-cache directory to show a
+TensorRT deployment that never opens the full checkpoint. They run on the
 CUDA backend by default and fall back to CPU automatically when no GPU is
 available (pass `cpu` where noted to force the reference backend).
 

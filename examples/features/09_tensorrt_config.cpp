@@ -10,6 +10,8 @@
 // win when params.trt.enabled is false):
 //
 //   trt.enabled          master switch
+//   trt.runtime_data     thin hparams/tokenizer/helper sidecar; setting this
+//                       means the full model checkpoint is never opened
 //   trt.encoder_onnx     image encoder (FP16 engine built on first use,
 //   trt.encoder_onnx_fp8 optional FP8-quantized variant       then cached)
 //   trt.pcs_onnx/pvs_onnx  text head / point head
@@ -28,7 +30,7 @@
 // on stderr and continues on FP16 -- watch for identical FP16/FP8 scores
 // below as the tell-tale.
 //
-// Usage: sam3cpp_ex_09_tensorrt_config <model.ggml> <image> <onnx-dir> <cache-dir>
+// Usage: sam3cpp_ex_09_tensorrt_config <image> <onnx-dir> <cache-dir>
 #include "sam3cpp/sam3.h"
 
 #include <chrono>
@@ -43,28 +45,28 @@ static double encode_ms(sam3_state& st, const sam3_model& m, const sam3_image& i
 }
 
 int main(int argc, char** argv) {
-    if (argc < 5) {
-        fprintf(stderr, "usage: %s <model.ggml> <image> <onnx-dir> <engine-cache-dir>\n", argv[0]);
+    if (argc < 4) {
+        fprintf(stderr, "usage: %s <image> <onnx-dir> <engine-cache-dir>\n", argv[0]);
         return 1;
     }
-    const std::string onnx = argv[3];
+    const std::string onnx = argv[2];
 
     sam3_params params;
-    params.model_path = argv[1];
 
     // ── Programmatic TensorRT config -- no environment variables ────────
     params.trt.enabled          = true;
+    params.trt.runtime_data     = onnx + "/sam3_runtime.sam3rt";
     params.trt.encoder_onnx     = onnx + "/sam3_encoder.onnx";
     params.trt.encoder_onnx_fp8 = onnx + "/sam3_encoder_fp8.onnx";  // optional
     params.trt.pcs_onnx         = onnx + "/sam3_pcs.onnx";
     params.trt.pvs_onnx         = onnx + "/sam3_pvs.onnx";
-    params.trt.cache_dir        = argv[4];
+    params.trt.cache_dir        = argv[3];
     // params.trt.pcs_precision    = "mixed:text_";  // default (validated)
     // params.trt.skip_ggml_weights = true;          // default: TRT-only, no fallback
 
     auto model = sam3_load_model(params);
     auto state = model ? sam3_create_state(*model, params) : nullptr;
-    sam3_image image = sam3_load_image(argv[2]);
+    sam3_image image = sam3_load_image(argv[1]);
     if (!state || image.data.empty()) return 1;
 
     // ── FP16 encoder (default) ───────────────────────────────────────────

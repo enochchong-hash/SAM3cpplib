@@ -133,8 +133,9 @@ std::vector<sam3_point> sam3_mask_coords(const sam3_mask & mask);
 // SAM3CPP_TENSORRT=ON; ignored otherwise. Any field left empty falls back to
 // the corresponding environment variable (SAM3_TRT_ONNX_PATH,
 // SAM3_TRT_ONNX_PATH_FP8, SAM3_TRT_PCS_ONNX_PATH, SAM3_TRT_PVS_ONNX_PATH,
-// SAM3_TRT_CACHE_DIR, SAM3_TRT_PCS_PRECISION, SAM3_TRT_SKIP_GGML_WEIGHTS),
-// so env-var-driven deployments keep working untouched.
+// SAM3_TRT_CACHE_DIR, SAM3_TRT_PCS_PRECISION, SAM3_TRT_SKIP_GGML_WEIGHTS,
+// SAM3_TRT_RUNTIME_DATA_PATH), so env-var-driven deployments keep working
+// untouched.
 struct sam3_trt_config {
     bool        enabled = false;      // master switch (equivalent of SAM3_TRT_ENCODER=1)
     std::string encoder_onnx;         // image encoder ONNX (FP16 engine)
@@ -142,6 +143,9 @@ struct sam3_trt_config {
     std::string pcs_onnx;             // PCS (text/exemplar head) ONNX
     std::string pcs_onnx_fp8;         // optional FP8-quantized PCS ONNX (fenc/ddec GEMMs)
     std::string pvs_onnx;             // PVS (point/box head) ONNX
+    std::string runtime_data;         // thin .sam3rt sidecar: hparams, tokenizer,
+                                      // and CPU-only TRT helper tensors; when set,
+                                      // sam3_load_model never opens model_path
     std::string cache_dir;            // serialized-engine cache root
     std::string pcs_precision = "mixed:text_";  // fp32 | fp16 | mixed:<substr,...>
     bool        skip_ggml_weights = true;       // TRT-only deployments: don't load
@@ -225,7 +229,8 @@ struct sam3_pvs_params {
 */
 
 /*
-** Load a SAM3 model from the file specified in params.model_path.
+** Load a SAM3 model from params.model_path, or from params.trt.runtime_data
+** when the TensorRT sidecar path is configured.
 ** Returns nullptr on failure.
 */
 std::shared_ptr<sam3_model> sam3_load_model(const sam3_params & params);
