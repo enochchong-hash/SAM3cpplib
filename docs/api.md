@@ -7,7 +7,7 @@ prefix; no classes, no exceptions — failures return `false`, `nullptr`, or an
 empty container with a message on stderr.
 
 > Runnable, per-feature walkthroughs of everything below live in
-> [`examples/features/`](../examples/README.md) (01–09, in reading order).
+> [`examples/features/`](../examples/README.md) (01–10, in reading order).
 
 ## Lifecycle
 
@@ -75,10 +75,18 @@ params.trt.cache_dir        = ".../var/trt_cache";  // engines land in /encoder,
 // params.trt.skip_ggml_weights = true;             // default: TRT-only, no ggml fallback
 ```
 
-or the `SAM3_TRT_*` environment variables (see `docs/tensorrt.md`). Runtime
-encoder precision: `sam3_set_encoder_fp8(*state, true)` switches to the FP8
-engine per state (both engines stay resident; switching is free after first
-use).
+or the `SAM3_TRT_*` environment variables (see `docs/tensorrt.md` for the
+full per-subsystem precision map and the FP8 pipeline). Runtime precision
+switches, per state, both engines resident, free to flip:
+
+```cpp
+sam3_set_encoder_fp8(*state, true);  // image encoder FP16 -> FP8
+sam3_set_pcs_fp8(*state, true);      // PCS head: FP8 fenc/ddec GEMMs
+                                     // (text stays FP32, attention FP16-fused)
+```
+
+PVS has no reduced-precision variant by design — it must run FP32 (FP16
+already diverges on negative-point prompts) and its engine is only ~32 MB.
 
 With `skip_ggml_weights` (the deployed default) the ~1.1 GB of ggml weights
 are never loaded and there is **no ggml fallback** — out-of-scope requests

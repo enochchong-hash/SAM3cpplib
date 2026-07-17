@@ -81,8 +81,23 @@ bool sam3_try_trt_segment_pcs(sam3_state& state, const sam3_model& model,
             fprintf(stderr, "%s: unknown SAM3_TRT_PCS_PRECISION '%s', using fp32\n", __func__, p.c_str());
         }
     }
-    sam3_trt_engine* eng = sam3_get_trt_engine_cached("SAM3_TRT_PCS_ONNX_PATH", "SAM3_TRT_PCS_CACHE_DIR",
-                                                      pcs_allow_fp16, pcs_fp32_patterns);
+    // FP8 PCS engine (opt-in per state, see sam3_set_pcs_fp8): same
+    // build/cache path -- the FP8 graph carries explicit E4M3 Q/DQ nodes on
+    // the fenc/ddec linear GEMMs, and the mixed-precision pinning (text_
+    // FP32) still applies to its unquantized regions. Falls back to the
+    // standard engine if unavailable, mirroring the encoder's FP8 contract.
+    sam3_trt_engine* eng = nullptr;
+    if (state.trt_pcs_fp8) {
+        eng = sam3_get_trt_engine_cached("SAM3_TRT_PCS_ONNX_PATH_FP8", "SAM3_TRT_PCS_CACHE_DIR",
+                                         pcs_allow_fp16, pcs_fp32_patterns);
+        if (!eng) {
+            fprintf(stderr, "%s: FP8 PCS requested but unavailable "
+                            "(SAM3_TRT_PCS_ONNX_PATH_FP8 unset or engine failed) -- using standard engine\n",
+                    __func__);
+        }
+    }
+    if (!eng) eng = sam3_get_trt_engine_cached("SAM3_TRT_PCS_ONNX_PATH", "SAM3_TRT_PCS_CACHE_DIR",
+                                               pcs_allow_fp16, pcs_fp32_patterns);
     if (!eng) return false;
 
     // Geometry input tokens (exemplar boxes' embeddings + precomputed

@@ -19,6 +19,7 @@ if(SAM3CPP_IMAGE_IO)
         07_encode_once_prompt_many
         08_mask_geometry
         09_tensorrt_config
+        10_pcs_fp8
     )
     foreach(ex IN LISTS SAM3CPP_FEATURE_EXAMPLES)
         add_executable(sam3cpp_ex_${ex} features/${ex}.cpp)
@@ -38,3 +39,11 @@ target_link_libraries(sam3cpp_dump_encoder_weights PRIVATE sam3cpp)
 
 add_executable(sam3cpp_dump_pcs_pvs_weights dump_pcs_pvs_weights.cpp)
 target_link_libraries(sam3cpp_dump_pcs_pvs_weights PRIVATE sam3cpp)
+
+# FP8-calibration input capture (uses sam3_internal.h -- offline dev tooling
+# for scripts/convert/fp8_pcs_amax_calib.py, not consumer API).
+if(SAM3CPP_IMAGE_IO)
+    add_executable(sam3cpp_dump_pcs_calib_inputs dump_pcs_calib_inputs.cpp)
+    target_link_libraries(sam3cpp_dump_pcs_calib_inputs PRIVATE sam3cpp)
+    target_include_directories(sam3cpp_dump_pcs_calib_inputs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+endif()

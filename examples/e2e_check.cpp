@@ -43,6 +43,7 @@ int main(int argc, char** argv) {
     // after the image loads); embedding files hold one raw 256-float row.
     std::vector<sam3_box> pos_ex_px, neg_ex_px;
     bool use_fp8 = false;
+    bool use_pcs_fp8 = false;
     int n_runs = 3;  // cold + warm repeats; goldens use --runs 1
     std::string save_embedding_path, use_embedding_path;
 
@@ -76,6 +77,7 @@ int main(int argc, char** argv) {
         else if (!strcmp(argv[i], "--out") && i + 1 < argc)     { out_dir = argv[++i]; }
         else if (!strcmp(argv[i], "--no-gpu"))                  { params.use_gpu = false; }
         else if (!strcmp(argv[i], "--fp8"))                     { use_fp8 = true; }
+        else if (!strcmp(argv[i], "--pcs-fp8"))                 { use_pcs_fp8 = true; }
         else if (!strcmp(argv[i], "--trt-onnx-dir") && i + 1 < argc) {
             // Programmatic TRT config (no env vars): expects the standard
             // export names sam3_encoder.onnx / sam3_pcs.onnx / sam3_pvs.onnx.
@@ -84,6 +86,7 @@ int main(int argc, char** argv) {
             params.trt.encoder_onnx = d + "/sam3_encoder.onnx";
             params.trt.encoder_onnx_fp8 = d + "/sam3_encoder_fp8.onnx";
             params.trt.pcs_onnx = d + "/sam3_pcs.onnx";
+            params.trt.pcs_onnx_fp8 = d + "/sam3_pcs_fp8.onnx";
             params.trt.pvs_onnx = d + "/sam3_pvs.onnx";
         }
         else if (!strcmp(argv[i], "--trt-cache-dir") && i + 1 < argc) { params.trt.cache_dir = argv[++i]; }
@@ -103,6 +106,7 @@ int main(int argc, char** argv) {
 
     auto state = sam3_create_state(*model, params);
     if (use_fp8) sam3_set_encoder_fp8(*state, true);
+    if (use_pcs_fp8) sam3_set_pcs_fp8(*state, true);
     sam3_image image = sam3_load_image(image_path);
     if (!state || image.data.empty()) { fprintf(stderr, "state/image load failed\n"); return 1; }
 

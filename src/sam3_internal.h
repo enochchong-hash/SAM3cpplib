@@ -643,6 +643,10 @@ struct sam3_state {
     // FP8 engine; both engines stay resident once used, so switching per
     // request costs nothing after first load.
     bool trt_encoder_fp8 = false;
+    // Same selector for the PCS head (see sam3_set_pcs_fp8): when true and a
+    // PCS FP8 engine is configured, sam3_segment_pcs uses it; falls back to
+    // the standard PCS engine with a log line otherwise.
+    bool trt_pcs_fp8 = false;
     ggml_backend_buffer_t trt_out_buf = nullptr;
 
     // PE buffer: holds sinusoidal PE tensors for neck outputs. sam3_sinusoidal_pe_2d

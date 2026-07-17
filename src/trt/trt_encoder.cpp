@@ -43,6 +43,7 @@ std::string sam3_trt_cfg_value(const char* env_name) {
         if (n == "SAM3_TRT_ONNX_PATH"     && !g_trt_cfg.encoder_onnx.empty())     return g_trt_cfg.encoder_onnx;
         if (n == "SAM3_TRT_ONNX_PATH_FP8" && !g_trt_cfg.encoder_onnx_fp8.empty()) return g_trt_cfg.encoder_onnx_fp8;
         if (n == "SAM3_TRT_PCS_ONNX_PATH" && !g_trt_cfg.pcs_onnx.empty())         return g_trt_cfg.pcs_onnx;
+        if (n == "SAM3_TRT_PCS_ONNX_PATH_FP8" && !g_trt_cfg.pcs_onnx_fp8.empty())  return g_trt_cfg.pcs_onnx_fp8;
         if (n == "SAM3_TRT_PVS_ONNX_PATH" && !g_trt_cfg.pvs_onnx.empty())         return g_trt_cfg.pvs_onnx;
         if (!g_trt_cfg.cache_dir.empty()) {
             if (n == "SAM3_TRT_CACHE_DIR")     return g_trt_cfg.cache_dir + "/encoder";

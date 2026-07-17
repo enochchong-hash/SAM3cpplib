@@ -39,12 +39,12 @@ available (pass `cpu` where noted to force the reference backend).
 | 07 | `07_encode_once_prompt_many.cpp` | The partial-inference pattern: pay for `sam3_encode_image` once, then run many cheap PCS/PVS prompts against the cached features |
 | 08 | `08_mask_geometry.cpp` | Mask convenience accessors: `sam3_mask_area/centroid/bbox/at/coords` — ready-made geometry instead of scanning mask bytes |
 | 09 | `09_tensorrt_config.cpp` | Programmatic TensorRT setup via `sam3_params::trt` (no env vars) + the runtime FP16↔FP8 encoder switch (`sam3_set_encoder_fp8`) |
+| 10 | `10_pcs_fp8.cpp` | The PCS FP8 switch (`sam3_set_pcs_fp8`): FP8 fusion-encoder/DETR GEMMs, FP32 text + FP16 fused attention preserved; accuracy/timing comparison |
 
-Reference docs: [docs/api.md](../docs/api.md) (API reference, including the
-TensorRT configuration surface) and [docs/goldens.md](../docs/goldens.md)
-(how outputs are validated). The full precision map and FP8 background live
-in the deployment's `release/sam3/docs/tensorrt.md` until P5 consolidates
-docs here.
+Reference docs: [docs/api.md](../docs/api.md) (API reference),
+[docs/tensorrt.md](../docs/tensorrt.md) (per-subsystem precision map, the
+two FP8 opt-ins, engine/cache behavior) and [docs/goldens.md](../docs/goldens.md)
+(how outputs are validated).
 
 ## What is deliberately *not* here
 

@@ -140,6 +140,7 @@ struct sam3_trt_config {
     std::string encoder_onnx;         // image encoder ONNX (FP16 engine)
     std::string encoder_onnx_fp8;     // optional FP8-quantized encoder ONNX
     std::string pcs_onnx;             // PCS (text/exemplar head) ONNX
+    std::string pcs_onnx_fp8;         // optional FP8-quantized PCS ONNX (fenc/ddec GEMMs)
     std::string pvs_onnx;             // PVS (point/box head) ONNX
     std::string cache_dir;            // serialized-engine cache root
     std::string pcs_precision = "mixed:text_";  // fp32 | fp16 | mixed:<substr,...>
@@ -265,6 +266,19 @@ void sam3_free_state(sam3_state & state);
 // stay resident once used -- switching per request is free after the first
 // load. Falls back to FP16 with a log line if the FP8 engine is unavailable.
 void sam3_set_encoder_fp8(sam3_state& state, bool fp8);
+
+// Same contract for the PCS (text/exemplar) head: fp8=true uses the FP8
+// engine configured via pcs_onnx_fp8 / SAM3_TRT_PCS_ONNX_PATH_FP8. The FP8
+// PCS graph quantizes the fusion-encoder and DETR-decoder linear GEMMs only
+// -- the text encoder stays FP32 (FP16/FP8-sensitive), attention stays FP16
+// (fused MHA), and the bbox/RPB MLPs, geometry encoder, scoring and seg head
+// stay FP16 (tiny or numerically delicate). See docs/tensorrt.md for the
+// full per-subsystem precision map and how to generate the FP8 graph.
+// Falls back to the standard PCS engine with a log line if unavailable.
+// The PVS head has no FP8 (or FP16) variant BY DESIGN: it must run FP32
+// (FP16 already diverges 27% on negative-point prompts) and its engine is
+// only ~32MB, so there is nothing to win.
+void sam3_set_pcs_fp8(sam3_state& state, bool fp8);
 
 bool sam3_encode_image(sam3_state       & state,
                        const sam3_model & model,

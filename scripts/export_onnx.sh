@@ -20,14 +20,16 @@ MODEL=""
 OUT_DIR="$ROOT_DIR/resources/onnx"
 BUILD_DIR="$ROOT_DIR/build"
 FP8_AMAX=""
+PCS_FP8_AMAX=""
 CHECK_FLAG=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --model)    MODEL="$2"; shift 2 ;;
-        --out)      OUT_DIR="$2"; shift 2 ;;
-        --build)    BUILD_DIR="$2"; shift 2 ;;
-        --fp8-amax) FP8_AMAX="$2"; shift 2 ;;
-        --check)    CHECK_FLAG="--check"; shift ;;
+        --model)        MODEL="$2"; shift 2 ;;
+        --out)          OUT_DIR="$2"; shift 2 ;;
+        --build)        BUILD_DIR="$2"; shift 2 ;;
+        --fp8-amax)     FP8_AMAX="$2"; shift 2 ;;
+        --pcs-fp8-amax) PCS_FP8_AMAX="$2"; shift 2 ;;
+        --check)        CHECK_FLAG="--check"; shift ;;
         *) echo "unknown arg: $1" >&2; exit 1 ;;
     esac
 done
@@ -60,8 +62,16 @@ if [[ -n "$FP8_AMAX" ]]; then
     echo "==> Injecting FP8 (E4M3) Q/DQ -> sam3_encoder_fp8.onnx"
     python3 "$CV/fp8_inject_qdq.py" "$OUT_DIR/sam3_encoder.onnx" "$FP8_AMAX" "$OUT_DIR/sam3_encoder_fp8.onnx"
 else
-    echo "==> Skipping FP8 variant (pass --fp8-amax amax.json; generate one with"
-    echo "    scripts/convert/fp8_amax_calib.py -- see docs/tensorrt.md)"
+    echo "==> Skipping encoder FP8 variant (pass --fp8-amax amax.json; generate one"
+    echo "    with scripts/convert/fp8_amax_calib.py -- see docs/tensorrt.md)"
+fi
+
+if [[ -n "$PCS_FP8_AMAX" ]]; then
+    echo "==> Injecting FP8 (E4M3) Q/DQ -> sam3_pcs_fp8.onnx (fenc/ddec linear GEMMs)"
+    python3 "$CV/fp8_pcs_inject_qdq.py" "$OUT_DIR/sam3_pcs.onnx" "$PCS_FP8_AMAX" "$OUT_DIR/sam3_pcs_fp8.onnx"
+else
+    echo "==> Skipping PCS FP8 variant (pass --pcs-fp8-amax amax.json; generate one"
+    echo "    with examples/dump_pcs_calib_inputs + scripts/convert/fp8_pcs_amax_calib.py)"
 fi
 
 rm -rf "$WORK"

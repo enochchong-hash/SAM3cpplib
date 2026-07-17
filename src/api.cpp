@@ -15,6 +15,15 @@ void sam3_set_encoder_fp8(sam3_state& state, bool fp8) {
 #endif
 }
 
+void sam3_set_pcs_fp8(sam3_state& state, bool fp8) {
+#ifdef SAM3_TRT_ENCODER
+    state.trt_pcs_fp8 = fp8;
+#else
+    (void)state;
+    if (fp8) fprintf(stderr, "%s: FP8 PCS needs a SAM3_TRT_ENCODER build -- ignored\n", __func__);
+#endif
+}
+
 bool sam3_encode_image(sam3_state& state,
                        const sam3_model& model,
                        const sam3_image& image) {
