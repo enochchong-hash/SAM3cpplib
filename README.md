@@ -1,6 +1,6 @@
 # sam3cpplib
 
-First-party C++ library for **SAM3 single-image promptable segmentation** — text,
+C++ library for **SAM3 single-image promptable segmentation** — text,
 exemplar-box, point, and box prompts — with three backends:
 
 - **TensorRT** (FP16 default / FP8 opt-in): primary NVIDIA fast path
@@ -9,16 +9,6 @@ exemplar-box, point, and box prompts — with three backends:
 
 Raw RGB in, raw 0/255 masks out — no image codecs, no HTTP, no Python at runtime.
 Designed to be embedded in a larger application as a git submodule.
-
-This library supersedes the `release/sam3` submodule-plus-patches arrangement; the code
-is owned here (originally derived from MIT-licensed `PABannier/sam3.cpp`, see LICENSE).
-
-**Status: phases P0–P4 complete** (see [docs/PLAN.md](docs/PLAN.md)) — all
-three backends pass their parity gates: ggml CPU/CUDA bitwise-identical to
-the production monolith; TensorRT FP16 bitwise-identical at production
-timings (~120/36/7 ms encoder/PCS/PVS warm), FP8 opt-ins for the encoder and
-the PCS head validated within ±0.003. ONNX regeneration from the .ggml is
-byte-identical to production; the golden process and parity tests are green.
 
 ## System overview
 
