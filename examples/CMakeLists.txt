@@ -7,6 +7,23 @@ if(SAM3CPP_IMAGE_IO)
 
     add_executable(sam3cpp_segment_image segment_image.cpp)
     target_link_libraries(sam3cpp_segment_image PRIVATE sam3cpp)
+
+    # features/ -- the numbered per-feature tour (see examples/README.md)
+    set(SAM3CPP_FEATURE_EXAMPLES
+        01_load_and_encode
+        02_text_prompt
+        03_point_prompts
+        04_box_prompt
+        05_exemplar_boxes
+        06_concept_embeddings
+        07_encode_once_prompt_many
+        08_mask_geometry
+        09_tensorrt_config
+    )
+    foreach(ex IN LISTS SAM3CPP_FEATURE_EXAMPLES)
+        add_executable(sam3cpp_ex_${ex} features/${ex}.cpp)
+        target_link_libraries(sam3cpp_ex_${ex} PRIVATE sam3cpp)
+    endforeach()
 else()
     message(STATUS "sam3cpplib: SAM3CPP_IMAGE_IO=OFF -- skipping e2e_check/segment_image examples")
 endif()

@@ -6,6 +6,9 @@ unchanged). All functions are C++-style free functions with the `sam3_`
 prefix; no classes, no exceptions — failures return `false`, `nullptr`, or an
 empty container with a message on stderr.
 
+> Runnable, per-feature walkthroughs of everything below live in
+> [`examples/features/`](../examples/README.md) (01–09, in reading order).
+
 ## Lifecycle
 
 ```cpp

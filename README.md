@@ -39,6 +39,9 @@ tests/parity_test.sh --model resources/models/sam3-q8_0.ggml \
 
 # end-to-end (needs a sam3 .ggml model, e.g. release/sam3's sam3-q8_0.ggml)
 ./build/examples/sam3cpp_segment_image --model sam3-q8_0.ggml --image cat.jpg --text cat
+
+# guided tour of every feature: examples/features/01..09 (see examples/README.md)
+./build/examples/sam3cpp_ex_01_load_and_encode sam3-q8_0.ggml tests/data/cat.jpg
 ```
 
 For TensorRT: `./scripts/setup_tensorrt.sh` once (or `--copy-from <dir>` to
