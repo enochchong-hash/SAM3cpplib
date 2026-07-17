@@ -92,8 +92,18 @@ table is in [tensorrt.md](tensorrt.md)):
 | Image encoder [1] | **FP16 / FP8** | FP16 | `sam3_set_encoder_fp8(state, true)` per state; engines from `encoder_onnx` / `encoder_onnx_fp8` (`SAM3_TRT_ONNX_PATH[_FP8]`) |
 | PCS text encoder [2] | FP32 only | FP32 | fixed (precision floor) — pinned via `pcs_precision = "mixed:text_"` |
 | PCS heads [3]–[6] | **whole-graph FP32 / FP16 / mixed** | `mixed:text_` (text FP32, rest FP16 + fused MHA) | `pcs_precision` field / `SAM3_TRT_PCS_PRECISION` = `fp32` \| `fp16` \| `mixed:<name-substrings>` |
-| PCS fenc+ddec GEMMs [4][5] | additionally **FP8** | off | `sam3_set_pcs_fp8(state, true)` per state; engine from `pcs_onnx_fp8` (`SAM3_TRT_PCS_ONNX_PATH_FP8`) |
+| PCS fenc+ddec linear GEMMs [4][5] | opt-in **FP8** on top of the mode above | off | `sam3_set_pcs_fp8(state, true)` per state; engine from `pcs_onnx_fp8` (`SAM3_TRT_PCS_ONNX_PATH_FP8`) |
 | PVS [7][8] | FP32 only | FP32 | fixed (precision floor: FP16 diverges on negative points) |
+
+Terminology for that FP8 row: a transformer layer has two kinds of matmul.
+**Linear GEMMs** multiply activations by a *fixed weight matrix* (the
+Q/K/V/output projections and the two FFN layers) -- those are what the PCS
+FP8 option quantizes (132 of them across fenc+ddec). **Attention BMMs**
+multiply activations by activations (Q.K^T and softmax.V) -- those stay FP16
+so TensorRT's fused-MHA kernel keeps matching (the source of the 97->35 ms
+PCS win). So with `mixed:text_` + PCS FP8, one request runs text FP32,
+attention FP16-fused, small MLPs FP16, and the heavy weight multiplications
+FP8.
 
 Both FP8 switches share one contract: per-state, both engines stay resident
 once used, flipping is free, and an unavailable FP8 engine falls back with a

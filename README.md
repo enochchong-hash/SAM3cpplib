@@ -45,7 +45,7 @@ it lives in the source: **[docs/architecture.md](docs/architecture.md)**.
 | [1] Image encoder | FP16 / **FP8** | `sam3_set_encoder_fp8(state, bool)` per state |
 | [2] Text encoder | FP32 only (precision floor) | — |
 | [3]–[6] PCS heads | FP32 / FP16 / `mixed:text_` (default) | `pcs_precision` / `SAM3_TRT_PCS_PRECISION` |
-| [4]+[5] fenc/DETR GEMMs | additionally **FP8** | `sam3_set_pcs_fp8(state, bool)` per state |
+| [4]+[5] weight matmuls (linear GEMMs: Q/K/V/out projections + FFN) | opt-in **FP8**, layered on top of the PCS mode above; attention matmuls stay FP16-fused | `sam3_set_pcs_fp8(state, bool)` per state |
 | [7]+[8] PVS | FP32 only (precision floor) | — |
 | Weights (.ggml, all backends) | f32 / f16 / q4_0 / q4_1 / **q8_0** (production) | `examples/quantize.cpp` |
 
